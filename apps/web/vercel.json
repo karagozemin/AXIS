@@ -1,6 +1,9 @@
 {
-  "buildCommand": "pnpm build",
+  "name": "axis-protocol",
+  "version": 2,
+  "buildCommand": "pnpm turbo build --filter=@axis/web",
   "installCommand": "pnpm install",
+  "outputDirectory": "apps/web/.next",
   "framework": "nextjs",
-  "outputDirectory": ".next"
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./apps/web"
 }
