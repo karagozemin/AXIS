@@ -92,9 +92,11 @@ export function TopBar({ title = 'Dashboard', subtitle }: TopBarProps) {
                             <div className="text-sm text-white font-semibold">
                               {loan.amount.toLocaleString()} ALEO
                             </div>
-                            <div className="text-xs text-white/60 mt-1">
-                              Collateral: {loan.collateral.toLocaleString()} ALEO
-                            </div>
+                            {loan.collateral && (
+                              <div className="text-xs text-white/60 mt-1">
+                                Collateral: {loan.collateral.toLocaleString()} ALEO
+                              </div>
+                            )}
                           </div>
                         ))}
 
