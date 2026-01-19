@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { GlassCard, GradientText } from '@/components/shared';
 import { CREDIT_TIERS, getCreditTier } from '@/lib/aleo/types';
@@ -15,6 +16,9 @@ export function CreditScoreCard({
   hasCredential = true,
   onMintClick 
 }: CreditScoreCardProps) {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showProof, setShowProof] = useState(false);
+  
   const tier = getCreditTier(score);
   
   // Calculate position on gauge (300-850 range)
@@ -22,6 +26,17 @@ export function CreditScoreCard({
   const maxScore = 850;
   const normalizedScore = ((score - minScore) / (maxScore - minScore)) * 100;
   const gaugeRotation = (normalizedScore / 100) * 180 - 90; // -90 to 90 degrees
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    setIsRefreshing(false);
+  };
+
+  const handleViewProof = () => {
+    setShowProof(!showProof);
+  };
 
   if (!hasCredential) {
     return (
@@ -148,16 +163,45 @@ export function CreditScoreCard({
 
       {/* Actions */}
       <div className="flex gap-3">
-        <button className="flex-1 btn-secondary text-sm py-2.5">
+        <motion.button 
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          whileHover={{ scale: isRefreshing ? 1 : 1.02 }}
+          whileTap={{ scale: isRefreshing ? 1 : 0.98 }}
+          className="flex-1 btn-secondary text-sm py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           <span className="flex items-center justify-center gap-2">
-            <RefreshIcon className="w-4 h-4" />
-            Refresh Score
+            <RefreshIcon className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh Score'}
           </span>
-        </button>
-        <button className="flex-1 btn-primary text-sm py-2.5">
-          View Proof
-        </button>
+        </motion.button>
+        <motion.button 
+          onClick={handleViewProof}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="flex-1 btn-primary text-sm py-2.5"
+        >
+          {showProof ? 'Hide Proof' : 'View Proof'}
+        </motion.button>
       </div>
+
+      {/* ZK Proof Display */}
+      {showProof && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          className="mt-4 p-4 rounded-lg bg-void-300/50 border border-electric/20"
+        >
+          <p className="text-xs text-white/40 mb-2">Zero-Knowledge Proof</p>
+          <div className="font-mono text-xs text-electric break-all">
+            proof1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgp...
+          </div>
+          <div className="mt-2 text-xs text-white/60">
+            ✓ Score verified without revealing transaction history
+          </div>
+        </motion.div>
+      )}
 
       {/* ZK Badge */}
       <div className="mt-4 flex items-center justify-center gap-2 text-xs text-white/30">
