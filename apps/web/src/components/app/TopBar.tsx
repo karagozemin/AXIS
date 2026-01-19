@@ -1,8 +1,10 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { GlassCard } from '@/components/shared';
 import { WalletButton } from './WalletButton';
+import { useLoanContext } from '@/contexts/LoanContext';
+import { useState } from 'react';
 
 interface TopBarProps {
   title?: string;
@@ -10,6 +12,11 @@ interface TopBarProps {
 }
 
 export function TopBar({ title = 'Dashboard', subtitle }: TopBarProps) {
+  const { activeLoans, deposits } = useLoanContext();
+  const [showNotifications, setShowNotifications] = useState(false);
+  
+  const totalActivities = activeLoans.length + deposits.length;
+
   return (
     <header className="sticky top-0 z-30 bg-void/80 backdrop-blur-xl border-b border-glass-border">
       <div className="flex items-center justify-between px-8 py-4">
@@ -43,10 +50,78 @@ export function TopBar({ title = 'Dashboard', subtitle }: TopBarProps) {
           </GlassCard>
 
           {/* Notifications */}
-          <button className="relative p-2 rounded-xl hover:bg-white/5 transition-colors">
-            <BellIcon className="w-5 h-5 text-white/60" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-electric rounded-full" />
-          </button>
+          <div className="relative">
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative p-2 rounded-xl hover:bg-white/5 transition-colors"
+            >
+              <BellIcon className="w-5 h-5 text-white/60" />
+              {totalActivities > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-electric rounded-full animate-pulse" />
+              )}
+            </button>
+
+            {/* Notification Dropdown */}
+            <AnimatePresence>
+              {showNotifications && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute right-0 mt-2 w-80"
+                >
+                  <GlassCard className="p-4 max-h-96 overflow-y-auto">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-white">Activity</h3>
+                      <span className="text-xs text-white/40">{totalActivities} active</span>
+                    </div>
+
+                    {totalActivities === 0 ? (
+                      <p className="text-sm text-white/40 text-center py-8">No recent activity</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {/* Active Loans */}
+                        {activeLoans.map((loan, idx) => (
+                          <div key={idx} className="p-3 rounded-lg bg-white/5 border border-white/10">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs text-accent-gold">🏦 Active Loan</span>
+                              <span className="text-xs text-white/40">
+                                {new Date(loan.timestamp).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="text-sm text-white font-semibold">
+                              {loan.amount.toLocaleString()} ALEO
+                            </div>
+                            <div className="text-xs text-white/60 mt-1">
+                              Collateral: {loan.collateral.toLocaleString()} ALEO
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Deposits */}
+                        {deposits.map((deposit, idx) => (
+                          <div key={idx} className="p-3 rounded-lg bg-white/5 border border-white/10">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs text-electric">💎 Deposit</span>
+                              <span className="text-xs text-white/40">
+                                {new Date(deposit.timestamp).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className="text-sm text-white font-semibold">
+                              {deposit.amount.toLocaleString()} ALEO
+                            </div>
+                            <div className="text-xs text-white/60 mt-1">
+                              Lock: {deposit.lockPeriod} days
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </GlassCard>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Connected Wallet */}
           <WalletButton />
