@@ -19,6 +19,7 @@ interface TransactionState {
 
 interface UseAleoTransactionReturn extends TransactionState {
   execute: (programId: string, functionName: string, inputs: string[], fee?: number) => Promise<string | null>;
+  executeDemo: (programId: string, functionName: string) => Promise<string | null>;
   reset: () => void;
 }
 
@@ -105,9 +106,61 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
     setState(initialState);
   }, []);
 
+  // Demo mode - simulate transaction without actual blockchain interaction
+  const executeDemo = useCallback(async (
+    programId: string,
+    functionName: string,
+  ): Promise<string | null> => {
+    if (!connected || !publicKey) {
+      setState({ ...initialState, status: 'error', error: 'Wallet not connected' });
+      return null;
+    }
+
+    try {
+      // Step 1: Preparing
+      setState({ ...initialState, status: 'preparing' });
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Step 2: Proving (ZK proof generation simulation)
+      setState(prev => ({ ...prev, status: 'proving' }));
+      const proofStart = Date.now();
+      
+      // Simulate ZK proof generation (2-4 seconds)
+      await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
+      
+      const proofTime = Date.now() - proofStart;
+
+      // Generate demo transaction ID
+      const demoTxId = `at1demo${Date.now().toString(36)}${Math.random().toString(36).substring(2, 15)}`;
+
+      // Step 3: Broadcasting
+      setState(prev => ({ ...prev, status: 'broadcasting', proofTime }));
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Step 4: Confirming
+      setState(prev => ({ ...prev, status: 'confirming', txId: demoTxId }));
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Success!
+      setState(prev => ({ ...prev, status: 'success' }));
+      
+      console.log(`[DEMO] Simulated ${programId}/${functionName} - TX: ${demoTxId}`);
+      return demoTxId;
+
+    } catch (error: any) {
+      setState(prev => ({
+        ...prev,
+        status: 'error',
+        error: error.message || 'Transaction failed',
+      }));
+      return null;
+    }
+  }, [connected, publicKey]);
+
   return {
     ...state,
     execute,
+    executeDemo,
     reset,
   };
 }
@@ -117,26 +170,35 @@ export function useCreditScore() {
   const tx = useAleoTransaction();
   const { publicKey } = useWallet();
 
+  // Demo mode flag - set to false when programs are deployed
+  const DEMO_MODE = true;
+
   const mintCredibility = useCallback(async (bondAmount: string) => {
     if (!publicKey) return null;
     
-    const currentTime = Math.floor(Date.now() / 1000).toString();
+    if (DEMO_MODE) {
+      return tx.executeDemo('axis_score_v1.aleo', 'mint_credibility');
+    }
     
+    const currentTime = Math.floor(Date.now() / 1000).toString();
     return tx.execute(
       'axis_score_v1.aleo',
       'mint_credibility',
-      [publicKey, `${bondAmount}u64`, '50u64', '80u64', `${currentTime}u64`] // owner, tx_count, balance_factor, repayment_rate, current_time
+      [publicKey, `${bondAmount}u64`, '50u64', '80u64', `${currentTime}u64`]
     );
   }, [publicKey, tx]);
 
   const verifyThreshold = useCallback(async (minScore: number) => {
     if (!publicKey) return null;
     
-    // This would need the actual credit bond record
+    if (DEMO_MODE) {
+      return tx.executeDemo('axis_score_v1.aleo', 'verify_threshold');
+    }
+    
     return tx.execute(
       'axis_score_v1.aleo',
       'verify_threshold',
-      [`${minScore}u64`] // minimum threshold
+      [`${minScore}u64`]
     );
   }, [publicKey, tx]);
 
@@ -151,33 +213,38 @@ export function useLending() {
   const tx = useAleoTransaction();
   const { publicKey } = useWallet();
 
+  // Demo mode flag - set to false when programs are deployed
+  const DEMO_MODE = true;
+
   const deposit = useCallback(async (amount: string) => {
     if (!publicKey) return null;
     
-    const currentTime = Math.floor(Date.now() / 1000).toString();
+    if (DEMO_MODE) {
+      // Simulate transaction for demo
+      return tx.executeDemo('axis_lending_v1.aleo', 'seed_the_axis');
+    }
     
-    // For now, use a simple credits transfer to test wallet integration
-    // Once axis_lending_v1.aleo is deployed, switch to:
-    // return tx.execute('axis_lending_v1.aleo', 'seed_the_axis', [...])
+    const currentTime = Math.floor(Date.now() / 1000).toString();
     return tx.execute(
-      'credits.aleo',
-      'transfer_public',
-      [publicKey, `${amount}u64`] // self-transfer for testing
+      'axis_lending_v1.aleo',
+      'seed_the_axis',
+      [publicKey, `${amount}u64`, `${currentTime}u64`]
     );
   }, [publicKey, tx]);
 
   const borrow = useCallback(async (amount: string, collateral: string) => {
     if (!publicKey) return null;
     
-    const currentTime = Math.floor(Date.now() / 1000).toString();
+    if (DEMO_MODE) {
+      // Simulate transaction for demo
+      return tx.executeDemo('axis_lending_v1.aleo', 'access_liquidity');
+    }
     
-    // For now, use a simple credits transfer to test wallet integration
-    // Once axis_lending_v1.aleo is deployed, switch to:
-    // return tx.execute('axis_lending_v1.aleo', 'access_liquidity', [...])
+    const currentTime = Math.floor(Date.now() / 1000).toString();
     return tx.execute(
-      'credits.aleo',
-      'transfer_public',
-      [publicKey, `${amount}u64`] // self-transfer for testing
+      'axis_lending_v1.aleo',
+      'access_liquidity',
+      [publicKey, `${amount}u64`, `${collateral}u64`, `${currentTime}u64`]
     );
   }, [publicKey, tx]);
 
