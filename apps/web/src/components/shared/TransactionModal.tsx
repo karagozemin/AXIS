@@ -105,7 +105,7 @@ export function TransactionModal({
                   >
                     <p className="text-xs text-white/40 mb-1">Transaction ID</p>
                     <a 
-                      href={`https://explorer.provable.com/transaction/${txId}`}
+                      href={`https://testnet.explorer.provable.com/transaction/${txId}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm font-mono text-electric hover:underline"

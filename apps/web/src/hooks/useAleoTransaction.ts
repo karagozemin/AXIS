@@ -54,13 +54,15 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
       const proofStart = Date.now();
 
       // Create transaction using the official adapter format
+      // Use public fee (not private records) for fee payment
       const aleoTransaction = Transaction.createTransaction(
         publicKey,
         WalletAdapterNetwork.TestnetBeta,
         programId,
         functionName,
         inputs,
-        fee
+        fee,
+        false // feePrivate = false, use public balance for fees
       );
 
       // Execute through wallet
