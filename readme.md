@@ -566,7 +566,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔗 Links
 
-- **Live Demo**: [Coming Soon]
+- **Live Demo**: [https://axis-protocol.vercel.app]
 - **Documentation**: [docs/](docs/)
 - **Architecture**: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - **Aleo**: [aleo.org](https://aleo.org)
