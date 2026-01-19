@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GlassCard, GradientText } from '@/components/shared';
+import { GlassCard, GradientText, TransactionModal } from '@/components/shared';
 import { getCreditTier } from '@/lib/aleo/types';
 import { formatCurrency } from '@/lib/utils';
 import { ZKProofAnimation } from './ZKProofAnimation';
+import { useLending } from '@/hooks';
+import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
 
 interface BorrowFormProps {
   creditScore?: number;
@@ -34,6 +36,10 @@ export function BorrowForm({
   const [duration, setDuration] = useState<'7d' | '30d' | '90d'>('30d');
   const [isGeneratingProof, setIsGeneratingProof] = useState(false);
   const [proofComplete, setProofComplete] = useState(false);
+  const [showTxModal, setShowTxModal] = useState(false);
+
+  const { connected, publicKey, select, wallets } = useWallet();
+  const { status, txId, error, proofTime, borrow, reset } = useLending();
 
   const tier = getCreditTier(creditScore);
   
@@ -52,23 +58,50 @@ export function BorrowForm({
   const totalRepayment = borrowAmount + interestAmount;
 
   const handleSubmit = async () => {
-    setIsGeneratingProof(true);
+    if (!connected || !publicKey) {
+      // Select first available wallet to trigger connection
+      if (wallets.length > 0) {
+        select(wallets[0].adapter.name);
+      }
+      return;
+    }
+
+    setShowTxModal(true);
     
-    // Simulate proof generation (2-3 seconds)
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Execute the borrow transaction
+    const result = await borrow(
+      String(borrowAmount * 1_000_000), // Convert to microcredits
+      String(requiredCollateral * 1_000_000)
+    );
     
-    setIsGeneratingProof(false);
-    setProofComplete(true);
-    
-    onSubmit?.({
-      borrowAmount,
-      collateralAmount: requiredCollateral,
-      duration,
-    });
+    if (result) {
+      setProofComplete(true);
+      onSubmit?.({
+        borrowAmount,
+        collateralAmount: requiredCollateral,
+        duration,
+      });
+    }
+  };
+
+  const handleCloseTxModal = () => {
+    setShowTxModal(false);
+    reset();
   };
 
   return (
     <div className="space-y-6">
+      {/* Transaction Modal */}
+      <TransactionModal
+        isOpen={showTxModal}
+        status={status}
+        txId={txId}
+        error={error}
+        proofTime={proofTime}
+        onClose={handleCloseTxModal}
+        title="Borrow Transaction"
+      />
+
       {/* ZK Proof Animation Overlay */}
       <AnimatePresence>
         {isGeneratingProof && (
@@ -244,19 +277,24 @@ export function BorrowForm({
       {/* Submit Button */}
       <motion.button
         onClick={handleSubmit}
-        disabled={isGeneratingProof}
+        disabled={status !== 'idle' && status !== 'success' && status !== 'error'}
         className="w-full btn-primary py-4 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
       >
-        {isGeneratingProof ? (
+        {!connected ? (
+          <span className="flex items-center justify-center gap-2">
+            <WalletIcon className="w-5 h-5" />
+            Connect Wallet to Borrow
+          </span>
+        ) : status !== 'idle' && status !== 'success' && status !== 'error' ? (
           <span className="flex items-center justify-center gap-3">
             <motion.div
               className="w-5 h-5 border-2 border-void border-t-transparent rounded-full"
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
             />
-            Generating ZK Proof...
+            Processing...
           </span>
         ) : (
           <span className="flex items-center justify-center gap-2">
@@ -275,6 +313,14 @@ export function BorrowForm({
 }
 
 // Icons
+function WalletIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
+    </svg>
+  );
+}
+
 function CollateralIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { GlassCard } from '@/components/shared';
+import { WalletButton } from './WalletButton';
 
 interface TopBarProps {
   title?: string;
@@ -48,14 +49,7 @@ export function TopBar({ title = 'Dashboard', subtitle }: TopBarProps) {
           </button>
 
           {/* Connected Wallet */}
-          <GlassCard className="px-4 py-2 flex items-center gap-3 cursor-pointer hover:bg-glass-hover">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-electric to-gold" />
-            <div>
-              <p className="text-sm font-medium text-white">aleo1qx...7m3k</p>
-              <p className="text-xs text-white/40 font-mono">12.5K credits</p>
-            </div>
-            <ChevronIcon className="w-4 h-4 text-white/40" />
-          </GlassCard>
+          <WalletButton />
         </div>
       </div>
     </header>

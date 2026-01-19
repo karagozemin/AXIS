@@ -4,7 +4,10 @@ import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GlassCard } from '@/components/shared/GlassCard';
 import { GradientText } from '@/components/shared/GradientText';
+import { TransactionModal } from '@/components/shared';
 import { ZKProofAnimation } from '@/components/borrow/ZKProofAnimation';
+import { useLending } from '@/hooks';
+import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
 
 interface DepositReceipt {
   amount: number;
@@ -18,6 +21,10 @@ export function DepositForm() {
   const [lockPeriod, setLockPeriod] = useState<number>(30);
   const [isDepositing, setIsDepositing] = useState(false);
   const [step, setStep] = useState<'input' | 'confirm' | 'proving' | 'success'>('input');
+  const [showTxModal, setShowTxModal] = useState(false);
+
+  const { connected, publicKey, select, wallets } = useWallet();
+  const { status, txId, error, proofTime, deposit, reset } = useLending();
 
   const numericAmount = parseFloat(amount) || 0;
 
@@ -46,14 +53,29 @@ export function DepositForm() {
   };
 
   const confirmDeposit = async () => {
+    if (!connected || !publicKey) {
+      // Select first available wallet to trigger connection
+      if (wallets.length > 0) {
+        select(wallets[0].adapter.name);
+      }
+      return;
+    }
+
     setIsDepositing(true);
-    setStep('proving');
+    setShowTxModal(true);
 
-    // Simulate ZK proof generation
-    await new Promise((resolve) => setTimeout(resolve, 4000));
+    // Execute the deposit transaction
+    const result = await deposit(String(numericAmount * 1_000_000)); // Convert to microcredits
 
-    setStep('success');
+    if (result) {
+      setStep('success');
+    }
     setIsDepositing(false);
+  };
+
+  const handleCloseTxModal = () => {
+    setShowTxModal(false);
+    reset();
   };
 
   const resetForm = () => {
@@ -70,6 +92,17 @@ export function DepositForm() {
 
   return (
     <div className="space-y-6">
+      {/* Transaction Modal */}
+      <TransactionModal
+        isOpen={showTxModal}
+        status={status}
+        txId={txId}
+        error={error}
+        proofTime={proofTime}
+        onClose={handleCloseTxModal}
+        title="Deposit Transaction"
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

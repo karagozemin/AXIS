@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
+import { WalletProvider } from '@/contexts';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -29,11 +30,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className="font-sans">
-        {/* Noise texture overlay for depth */}
-        <div className="noise-overlay fixed inset-0 pointer-events-none z-50" />
-        
-        {/* Main content */}
-        {children}
+        <WalletProvider>
+          {/* Noise texture overlay for depth */}
+          <div className="noise-overlay fixed inset-0 pointer-events-none z-50" />
+          
+          {/* Main content */}
+          {children}
+        </WalletProvider>
       </body>
     </html>
   );
