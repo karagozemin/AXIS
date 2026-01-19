@@ -7,6 +7,7 @@ export interface Loan {
   type: 'borrow' | 'deposit' | 'repay';
   amount: number;
   collateral?: number;
+  lockPeriod?: number;
   timestamp: Date;
   status: 'pending' | 'active' | 'completed';
   txId: string;

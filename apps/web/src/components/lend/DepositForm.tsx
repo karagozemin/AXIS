@@ -76,6 +76,7 @@ export function DepositForm() {
       addDeposit({
         type: 'deposit',
         amount: numericAmount,
+        lockPeriod: lockPeriod,
         status: 'active',
         txId: result,
       });

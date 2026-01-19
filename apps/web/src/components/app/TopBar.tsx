@@ -112,9 +112,11 @@ export function TopBar({ title = 'Dashboard', subtitle }: TopBarProps) {
                             <div className="text-sm text-white font-semibold">
                               {deposit.amount.toLocaleString()} ALEO
                             </div>
-                            <div className="text-xs text-white/60 mt-1">
-                              Lock: {deposit.lockPeriod} days
-                            </div>
+                            {deposit.lockPeriod && (
+                              <div className="text-xs text-white/60 mt-1">
+                                Lock: {deposit.lockPeriod} days
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
