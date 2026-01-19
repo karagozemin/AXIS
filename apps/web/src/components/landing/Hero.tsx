@@ -66,11 +66,25 @@ export function Hero() {
       <div className="relative z-10 container mx-auto px-6 pt-32 pb-40">
         <div className="flex flex-col items-center text-center">
           
+          {/* Logo */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
+            className="mb-8"
+          >
+            <img 
+              src="/axis-logo.png" 
+              alt="AXIS Protocol" 
+              className="w-32 h-32 md:w-40 md:h-40 object-contain drop-shadow-[0_0_30px_rgba(0,212,255,0.5)]"
+            />
+          </motion.div>
+
           {/* "Built on Aleo" Badge */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
+            transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
           >
             <GlassCard className="inline-flex items-center gap-3 px-5 py-2.5 mb-10">
               <span className="status-dot active" />
@@ -85,7 +99,7 @@ export function Hero() {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.1, ease: 'easeOut' }}
+            transition={{ duration: 0.7, delay: 0.3, ease: 'easeOut' }}
             className="mb-6"
           >
             <h1 className="text-8xl md:text-9xl font-bold tracking-tighter">

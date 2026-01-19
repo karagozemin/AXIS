@@ -23,8 +23,12 @@ export function Sidebar() {
         {/* Logo */}
         <div className="p-6 border-b border-glass-border">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric to-gold flex items-center justify-center">
-              <span className="text-void font-bold text-lg">A</span>
+            <div className="relative w-10 h-10 flex items-center justify-center">
+              <img 
+                src="/axis-logo.png" 
+                alt="AXIS" 
+                className="w-10 h-10 object-contain drop-shadow-[0_0_10px_rgba(0,212,255,0.5)] group-hover:drop-shadow-[0_0_20px_rgba(0,212,255,0.7)] transition-all duration-300"
+              />
             </div>
             <div>
               <h1 className="text-xl font-bold gradient-text group-hover:animate-pulse">AXIS</h1>

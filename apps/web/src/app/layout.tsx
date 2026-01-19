@@ -9,16 +9,23 @@ export const metadata: Metadata = {
   description: 'Under-collateralized, privacy-preserving lending powered by Zero-Knowledge Proofs on Aleo. Access liquidity without exposing your financial history.',
   keywords: ['DeFi', 'Privacy', 'Zero-Knowledge', 'Lending', 'Aleo', 'ZK Proofs', 'Under-collateralized'],
   authors: [{ name: 'AXIS Team' }],
+  icons: {
+    icon: '/axis-logo.png',
+    shortcut: '/axis-logo.png',
+    apple: '/axis-logo.png',
+  },
   openGraph: {
     title: 'AXIS | The Center of Private Finance',
     description: 'Under-collateralized, privacy-preserving lending powered by Zero-Knowledge Proofs.',
     type: 'website',
     locale: 'en_US',
+    images: ['/axis-logo.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'AXIS | The Center of Private Finance',
     description: 'Under-collateralized, privacy-preserving lending powered by Zero-Knowledge Proofs.',
+    images: ['/axis-logo.png'],
   },
 };
 
