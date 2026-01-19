@@ -127,6 +127,29 @@ export function BorrowForm({
         )}
       </AnimatePresence>
 
+      {/* Wallet Connection Required */}
+      {!connected && (
+        <GlassCard variant="gold" className="p-6">
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-accent-gold/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-accent-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-white mb-2">Wallet Required</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              Please connect your Leo Wallet to access liquidity
+            </p>
+            <button
+              onClick={() => select(wallets[0]?.adapter.name)}
+              className="px-6 py-3 rounded-lg bg-gradient-to-r from-accent-gold to-amber-500 text-white font-semibold hover:shadow-lg hover:shadow-accent-gold/25 transition-all"
+            >
+              Connect Wallet
+            </button>
+          </div>
+        </GlassCard>
+      )}
+
       {/* Borrow Amount Input */}
       <GlassCard className="p-6">
         <div className="flex items-center justify-between mb-4">
@@ -144,7 +167,8 @@ export function BorrowForm({
               type="number"
               value={borrowAmount}
               onChange={(e) => setBorrowAmount(Math.min(Number(e.target.value), maxBorrow))}
-              className="text-4xl font-bold font-mono text-white bg-transparent border-none outline-none w-40"
+              disabled={!connected}
+              className="text-4xl font-bold font-mono text-white bg-transparent border-none outline-none w-40 disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
           
@@ -155,7 +179,8 @@ export function BorrowForm({
             step={1000}
             value={borrowAmount}
             onChange={(e) => setBorrowAmount(Number(e.target.value))}
-            className="w-full h-2 bg-void-300 rounded-full appearance-none cursor-pointer
+            disabled={!connected}
+            className="w-full h-2 bg-void-300 rounded-full appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
               [&::-webkit-slider-thumb]:appearance-none
               [&::-webkit-slider-thumb]:w-5
               [&::-webkit-slider-thumb]:h-5
@@ -173,7 +198,8 @@ export function BorrowForm({
               <button
                 key={amount}
                 onClick={() => setBorrowAmount(Math.min(amount, maxBorrow))}
-                className={`px-3 py-1.5 rounded-lg text-sm font-mono transition-all ${
+                disabled={!connected}
+                className={`px-3 py-1.5 rounded-lg text-sm font-mono transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                   borrowAmount === amount 
                     ? 'bg-electric/20 text-electric border border-electric/50' 
                     : 'bg-void-300 text-white/60 hover:bg-void-200 hover:text-white'
@@ -290,15 +316,15 @@ export function BorrowForm({
       {/* Submit Button */}
       <motion.button
         onClick={handleSubmit}
-        disabled={status !== 'idle' && status !== 'success' && status !== 'error'}
+        disabled={!connected || (status !== 'idle' && status !== 'success' && status !== 'error')}
         className="w-full btn-primary py-4 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+        whileHover={{ scale: connected ? 1.02 : 1 }}
+        whileTap={{ scale: connected ? 0.98 : 1 }}
       >
         {!connected ? (
           <span className="flex items-center justify-center gap-2">
             <WalletIcon className="w-5 h-5" />
-            Connect Wallet to Borrow
+            🔒 Connect Wallet to Borrow
           </span>
         ) : status !== 'idle' && status !== 'success' && status !== 'error' ? (
           <span className="flex items-center justify-center gap-3">

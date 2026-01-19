@@ -136,6 +136,29 @@ export function DepositForm() {
             exit={{ opacity: 0, y: -20 }}
             className="space-y-6"
           >
+            {/* Wallet Connection Required */}
+            {!connected && (
+              <GlassCard variant="gold" className="p-6">
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-accent-gold/20 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-accent-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2">Wallet Required</h3>
+                  <p className="text-sm text-gray-400 mb-4">
+                    Please connect your Leo Wallet to start depositing
+                  </p>
+                  <button
+                    onClick={() => select(wallets[0]?.adapter.name)}
+                    className="px-6 py-3 rounded-lg bg-gradient-to-r from-accent-gold to-amber-500 text-white font-semibold hover:shadow-lg hover:shadow-accent-gold/25 transition-all"
+                  >
+                    Connect Wallet
+                  </button>
+                </div>
+              </GlassCard>
+            )}
+
             {/* Amount Input */}
             <GlassCard variant="vault" className="p-6">
               <label className="block text-sm text-gray-400 mb-3">Deposit Amount</label>
@@ -145,7 +168,8 @@ export function DepositForm() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full rounded-lg px-4 py-4 text-2xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-gold/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  disabled={!connected}
+                  className="w-full rounded-lg px-4 py-4 text-2xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-gold/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ 
                     backgroundColor: '#1a1a28', 
                     border: '1px solid #2a2a3a',
@@ -231,17 +255,17 @@ export function DepositForm() {
             {/* Deposit Button - Always visible */}
             <motion.button
               onClick={handleDeposit}
-              disabled={numericAmount <= 0}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              disabled={numericAmount <= 0 || !connected}
+              whileHover={{ scale: connected ? 1.02 : 1 }}
+              whileTap={{ scale: connected ? 0.98 : 1 }}
               className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
-                numericAmount > 0
+                numericAmount > 0 && connected
                   ? 'bg-gradient-to-r from-accent-gold to-amber-500 hover:shadow-lg hover:shadow-accent-gold/25'
                   : 'bg-midnight-700 cursor-not-allowed'
               }`}
-              style={{ color: numericAmount > 0 ? '#ffffff' : '#6b7280' }}
+              style={{ color: numericAmount > 0 && connected ? '#ffffff' : '#6b7280' }}
             >
-              🌱 Seed the Axis
+              {!connected ? '🔒 Connect Wallet First' : '🌱 Seed the Axis'}
             </motion.button>
           </motion.div>
         )}
