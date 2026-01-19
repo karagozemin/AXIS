@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { GlassCard } from '@/components/shared';
+import { SidebarWalletButton } from './SidebarWalletButton';
 
 const navItems = [
   { href: '/vaults', label: 'Dashboard', icon: DashboardIcon },
@@ -79,9 +80,7 @@ export function Sidebar() {
 
         {/* Wallet Connect */}
         <div className="p-4 pt-0">
-          <button className="w-full btn-primary text-sm py-3">
-            Connect Wallet
-          </button>
+          <SidebarWalletButton />
         </div>
       </div>
     </aside>
