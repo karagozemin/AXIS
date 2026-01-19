@@ -1,0 +1,6 @@
+{
+  "program": "axis_score.aleo",
+  "version": "0.1.0",
+  "description": "Privacy-preserving credit score computation for AXIS Protocol. Generates Proof of Credibility without revealing underlying financial data.",
+  "license": "MIT"
+}

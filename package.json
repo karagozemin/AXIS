@@ -1,0 +1,24 @@
+{
+  "name": "axis",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AXIS - The Center of Private Finance. Privacy-preserving under-collateralized lending on Aleo.",
+  "author": "AXIS Team <team@axis.finance>",
+  "license": "MIT",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "build:programs": "cd programs && ./build-all.sh",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "program": "axis_lending.aleo",
+  "version": "0.1.0",
+  "description": "Under-collateralized lending vaults for AXIS Protocol. Enables privacy-preserving borrowing using Proof of Credibility.",
+  "license": "MIT"
+}

@@ -1,0 +1,12 @@
+// Test inputs for axis_lending.aleo
+
+[seed_the_axis]
+amount: u64 = 100000000u64;
+current_time: u64 = 1737331200u64;
+
+[access_liquidity]
+credit_score: u64 = 720u64;
+collateral_amount: u64 = 7000000u64;
+borrow_amount: u64 = 10000000u64;
+duration: u64 = 2592000u64;
+current_time: u64 = 1737331200u64;

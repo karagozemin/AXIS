@@ -1,0 +1,15 @@
+// Test inputs for axis_score.aleo
+
+[mint_credibility]
+data: FinancialData = FinancialData {
+    tx_count: 75u64,
+    balance_factor: 80u64,
+    repayment_rate: 95u64,
+    account_age_days: 365u64,
+    collateral_history: 85u64,
+};
+current_time: u64 = 1737331200u64;
+
+[verify_threshold]
+min_required: u64 = 650u64;
+current_time: u64 = 1737331200u64;
