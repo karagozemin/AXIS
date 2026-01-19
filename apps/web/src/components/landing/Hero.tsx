@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import { GlassCard, GradientText } from '@/components/shared';
 
 /**
@@ -123,7 +124,7 @@ export function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4, ease: 'easeOut' }}
           >
-            <button className="btn-primary glow-effect group">
+            <Link href="/borrow" className="btn-primary glow-effect group">
               <span className="relative z-10 flex items-center gap-2">
                 Access Liquidity
                 <svg 
@@ -135,15 +136,15 @@ export function Hero() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
               </span>
-            </button>
-            <button className="btn-secondary">
+            </Link>
+            <Link href="https://github.com/karagozemin/AXIS" target="_blank" className="btn-secondary">
               <span className="flex items-center gap-2">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 Read Documentation
               </span>
-            </button>
+            </Link>
           </motion.div>
 
           {/* Stats Grid */}

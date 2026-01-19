@@ -118,10 +118,12 @@ export function useCreditScore() {
   const mintCredibility = useCallback(async (bondAmount: string) => {
     if (!publicKey) return null;
     
+    const currentTime = Math.floor(Date.now() / 1000).toString();
+    
     return tx.execute(
-      'axis_score.aleo',
+      'axis_score_v1.aleo',
       'mint_credibility',
-      [publicKey, `${bondAmount}u64`, '0u64'] // owner, bond_amount, initial score
+      [publicKey, `${bondAmount}u64`, '50u64', '80u64', `${currentTime}u64`] // owner, tx_count, balance_factor, repayment_rate, current_time
     );
   }, [publicKey, tx]);
 
@@ -130,7 +132,7 @@ export function useCreditScore() {
     
     // This would need the actual credit bond record
     return tx.execute(
-      'axis_score.aleo',
+      'axis_score_v1.aleo',
       'verify_threshold',
       [`${minScore}u64`] // minimum threshold
     );
@@ -150,20 +152,30 @@ export function useLending() {
   const deposit = useCallback(async (amount: string) => {
     if (!publicKey) return null;
     
+    const currentTime = Math.floor(Date.now() / 1000).toString();
+    
+    // For now, use a simple credits transfer to test wallet integration
+    // Once axis_lending_v1.aleo is deployed, switch to:
+    // return tx.execute('axis_lending_v1.aleo', 'seed_the_axis', [...])
     return tx.execute(
-      'axis_lending.aleo',
-      'seed_the_axis',
-      [publicKey, `${amount}u64`] // owner, amount
+      'credits.aleo',
+      'transfer_public',
+      [publicKey, `${amount}u64`] // self-transfer for testing
     );
   }, [publicKey, tx]);
 
   const borrow = useCallback(async (amount: string, collateral: string) => {
     if (!publicKey) return null;
     
+    const currentTime = Math.floor(Date.now() / 1000).toString();
+    
+    // For now, use a simple credits transfer to test wallet integration
+    // Once axis_lending_v1.aleo is deployed, switch to:
+    // return tx.execute('axis_lending_v1.aleo', 'access_liquidity', [...])
     return tx.execute(
-      'axis_lending.aleo',
-      'access_liquidity',
-      [publicKey, `${amount}u64`, `${collateral}u64`] // borrower, amount, collateral
+      'credits.aleo',
+      'transfer_public',
+      [publicKey, `${amount}u64`] // self-transfer for testing
     );
   }, [publicKey, tx]);
 
