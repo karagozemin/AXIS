@@ -18,6 +18,13 @@ const config: Config = {
           300: '#1a1a25',
           400: '#252533',
         },
+        midnight: {
+          DEFAULT: '#0a0a14',
+          600: '#1a1a28',
+          700: '#141420',
+          800: '#0d0d18',
+          900: '#080810',
+        },
         electric: {
           DEFAULT: '#00D4FF',
           50: '#E5FAFF',

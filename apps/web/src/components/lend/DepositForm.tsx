@@ -8,6 +8,7 @@ import { TransactionModal } from '@/components/shared';
 import { ZKProofAnimation } from '@/components/borrow/ZKProofAnimation';
 import { useLending } from '@/hooks';
 import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
+import { useLoanContext } from '@/contexts/LoanContext';
 
 interface DepositReceipt {
   amount: number;
@@ -25,6 +26,7 @@ export function DepositForm() {
 
   const { connected, publicKey, select, wallets } = useWallet();
   const { status, txId, error, proofTime, deposit, reset } = useLending();
+  const { addDeposit } = useLoanContext();
 
   const numericAmount = parseFloat(amount) || 0;
 
@@ -69,6 +71,14 @@ export function DepositForm() {
 
     if (result) {
       setStep('success');
+      
+      // Add deposit to context
+      addDeposit({
+        type: 'deposit',
+        amount: numericAmount,
+        status: 'active',
+        txId: result,
+      });
     }
     setIsDepositing(false);
   };
@@ -135,7 +145,13 @@ export function DepositForm() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full bg-midnight-800/50 border border-midnight-700 rounded-lg px-4 py-4 text-2xl text-white placeholder-gray-600 focus:outline-none focus:border-accent-gold/50 transition-colors"
+                  className="w-full rounded-lg px-4 py-4 text-2xl placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-gold/50 transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  style={{ 
+                    backgroundColor: '#1a1a28', 
+                    border: '1px solid #2a2a3a',
+                    color: '#ffffff',
+                    WebkitTextFillColor: '#ffffff'
+                  }}
                 />
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
                   <span className="text-accent-gold font-semibold">ALEO</span>
@@ -212,7 +228,7 @@ export function DepositForm() {
               </motion.div>
             )}
 
-            {/* Deposit Button */}
+            {/* Deposit Button - Always visible */}
             <motion.button
               onClick={handleDeposit}
               disabled={numericAmount <= 0}
@@ -220,11 +236,12 @@ export function DepositForm() {
               whileTap={{ scale: 0.98 }}
               className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
                 numericAmount > 0
-                  ? 'bg-gradient-to-r from-accent-gold to-amber-500 text-black hover:shadow-lg hover:shadow-accent-gold/25'
-                  : 'bg-midnight-800 text-gray-500 cursor-not-allowed'
+                  ? 'bg-gradient-to-r from-accent-gold to-amber-500 hover:shadow-lg hover:shadow-accent-gold/25'
+                  : 'bg-midnight-700 cursor-not-allowed'
               }`}
+              style={{ color: numericAmount > 0 ? '#ffffff' : '#6b7280' }}
             >
-              Seed the Axis
+              🌱 Seed the Axis
             </motion.button>
           </motion.div>
         )}
@@ -262,15 +279,17 @@ export function DepositForm() {
               <div className="flex gap-4">
                 <button
                   onClick={() => setStep('input')}
-                  className="flex-1 py-3 rounded-lg border border-midnight-600 text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
-                >
+                  className="flex-1 py-3 rounded-lg bg-gradient-to-r from-accent-gold to-amber-500 font-bold"
+                  style={{ color: '#ffffff' }}
+    >
                   Cancel
                 </button>
                 <motion.button
                   onClick={confirmDeposit}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="flex-1 py-3 rounded-lg bg-gradient-to-r from-accent-gold to-amber-500 text-black font-bold"
+                  className="flex-1 py-3 rounded-lg bg-gradient-to-r from-accent-gold to-amber-500 font-bold"
+                  style={{ color: '#ffffff' }}
                 >
                   Confirm & Sign
                 </motion.button>

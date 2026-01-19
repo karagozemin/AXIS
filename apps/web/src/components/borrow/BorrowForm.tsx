@@ -8,6 +8,7 @@ import { formatCurrency } from '@/lib/utils';
 import { ZKProofAnimation } from './ZKProofAnimation';
 import { useLending } from '@/hooks';
 import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
+import { useLoanContext } from '@/contexts/LoanContext';
 
 interface BorrowFormProps {
   creditScore?: number;
@@ -40,6 +41,7 @@ export function BorrowForm({
 
   const { connected, publicKey, select, wallets } = useWallet();
   const { status, txId, error, proofTime, borrow, reset } = useLending();
+  const { addLoan } = useLoanContext();
 
   const tier = getCreditTier(creditScore);
   
@@ -76,6 +78,17 @@ export function BorrowForm({
     
     if (result) {
       setProofComplete(true);
+      
+      // Add loan to context
+      addLoan({
+        type: 'borrow',
+        amount: borrowAmount,
+        collateral: requiredCollateral,
+        status: 'active',
+        txId: result,
+        tier: tier.name,
+      });
+      
       onSubmit?.({
         borrowAmount,
         collateralAmount: requiredCollateral,
