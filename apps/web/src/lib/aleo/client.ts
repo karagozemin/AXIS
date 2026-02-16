@@ -18,10 +18,10 @@ import {
 export const ALEO_NETWORK_URL = process.env.NEXT_PUBLIC_ALEO_RPC_URL || 'https://api.explorer.provable.com/v1';
 export const ALEO_NETWORK = (process.env.NEXT_PUBLIC_ALEO_NETWORK || 'testnet') as 'testnet' | 'mainnet';
 
-// Program IDs
+// Program IDs — v2 (deployed to Aleo testnet)
 export const PROGRAMS = {
-  AXIS_SCORE: 'axis_score.aleo',
-  AXIS_LENDING: 'axis_lending.aleo',
+  AXIS_SCORE: 'axis_score_v2.aleo',
+  AXIS_LENDING: 'axis_lending_v2.aleo',
 } as const;
 
 /**

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { GlassCard, GradientText } from '@/components/shared';
 import { CREDIT_TIERS, getCreditTier } from '@/lib/aleo/types';
+import { useCreditScore } from '@/hooks/useAleoTransaction';
 
 interface CreditScoreCardProps {
   score?: number;
@@ -18,6 +19,7 @@ export function CreditScoreCard({
 }: CreditScoreCardProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showProof, setShowProof] = useState(false);
+  const { computeCredibility, commitScore, status: scoreStatus } = useCreditScore();
   
   const tier = getCreditTier(score);
   
@@ -29,8 +31,14 @@ export function CreditScoreCard({
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Call the v2 compute_credibility transition via ZK circuit
+    await computeCredibility({
+      repaymentHistory: 92,
+      positionDuration: 78,
+      utilizationRate: 35,
+      protocolInteractions: 85,
+      collateralDiversity: 70,
+    });
     setIsRefreshing(false);
   };
 
@@ -50,12 +58,21 @@ export function CreditScoreCard({
             Generate your private credit score to access under-collateralized loans.
           </p>
           <button 
-            onClick={onMintClick}
-            className="btn-primary"
+            onClick={onMintClick || (async () => {
+              await computeCredibility({
+                repaymentHistory: 50,
+                positionDuration: 30,
+                utilizationRate: 50,
+                protocolInteractions: 20,
+                collateralDiversity: 30,
+              });
+            })}
+            disabled={scoreStatus === 'proving' || scoreStatus === 'broadcasting'}
+            className="btn-primary disabled:opacity-50"
           >
             <span className="flex items-center gap-2">
               <ZKIcon className="w-5 h-5" />
-              Mint Proof of Credibility
+              {scoreStatus === 'proving' ? 'Generating ZK Proof...' : 'Mint Proof of Credibility'}
             </span>
           </button>
         </div>

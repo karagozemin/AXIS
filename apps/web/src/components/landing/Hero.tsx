@@ -175,9 +175,9 @@ export function Hero() {
               icon={<ShieldIcon />}
             />
             <StatCard 
-              value="<80%" 
-              label="Collateral Ratio" 
-              sublabel="Under-Collateralized"
+              value="50%" 
+              label="Min Collateral" 
+              sublabel="Tier 1 — Axis Elite"
               icon={<VaultIcon />}
               variant="gold"
             />

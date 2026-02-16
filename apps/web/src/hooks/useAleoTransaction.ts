@@ -169,12 +169,13 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
 // AXIS v2 Program Hooks
 // ============================================================================
 
-// Program IDs — v2
+// Program IDs — v2 (deployed to Aleo testnet)
 const SCORE_PROGRAM = 'axis_score_v2.aleo';
 const LENDING_PROGRAM = 'axis_lending_v2.aleo';
 
-// Set to false once contracts are deployed to testnet
-const DEMO_MODE = true;
+// Demo mode: set NEXT_PUBLIC_DEMO_MODE=false to use real on-chain transactions
+// Defaults to true until Aleo SDK browser proving is stable
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE !== 'false';
 
 // ── Credit Score Hook ──────────────────────────────────────────────────────
 
