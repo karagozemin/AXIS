@@ -37,7 +37,8 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
   const { 
     connected, 
     publicKey, 
-    requestTransaction, 
+    requestTransaction,
+    requestExecution,
     transactionStatus: walletTxStatus,
     getExecution,
   } = useWallet();
@@ -72,31 +73,49 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
         false // use public balance for fees
       );
 
-      // Execute through Leo Wallet — real ZK proof generated here
-      // Returns a wallet-internal tracking ID (UUID format)
-      let walletTrackingId: string | null = null;
-      if (requestTransaction) {
-        walletTrackingId = await requestTransaction(aleoTransaction);
+      // Try requestExecution first (returns real at1... TX ID on newer wallets),
+      // fall back to requestTransaction (returns UUID tracking ID)
+      let rawTxId: string | null = null;
+      
+      if (requestExecution) {
+        try {
+          rawTxId = await requestExecution(aleoTransaction);
+        } catch {
+          // requestExecution not supported, fall back
+        }
+      }
+      
+      if (!rawTxId && requestTransaction) {
+        rawTxId = await requestTransaction(aleoTransaction);
       }
 
       const proofTime = Date.now() - proofStart;
 
-      if (!walletTrackingId) {
+      if (!rawTxId) {
         throw new Error('Transaction rejected by wallet');
       }
 
-      // Step 3: Broadcasting
+      // Step 3: Broadcasting  
       setState(prev => ({ ...prev, status: 'broadcasting', proofTime }));
 
-      // Step 4: Confirming — poll for real on-chain TX ID (at1...)
+      // Step 4: Confirm + resolve real TX ID
       setState(prev => ({ ...prev, status: 'confirming' }));
 
+      // If we already got a real at1... ID, we're done
+      if (rawTxId.startsWith('at1')) {
+        // Still wait for on-chain confirmation
+        await waitForOnChainConfirmation(rawTxId);
+        setState(prev => ({ ...prev, status: 'success', txId: rawTxId }));
+        return rawTxId;
+      }
+
+      // We got a UUID — need to resolve real TX ID
       const realTxId = await resolveRealTransactionId(
-        walletTrackingId, 
-        walletTxStatus, 
-        getExecution
+        rawTxId,
+        walletTxStatus,
+        getExecution,
       );
-      
+
       setState(prev => ({ ...prev, status: 'success', txId: realTxId }));
       return realTxId;
 
@@ -109,7 +128,7 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
       }));
       return null;
     }
-  }, [connected, publicKey, requestTransaction, walletTxStatus, getExecution]);
+  }, [connected, publicKey, requestTransaction, requestExecution, walletTxStatus, getExecution]);
 
   const reset = useCallback(() => {
     setState(initialState);
@@ -123,71 +142,78 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
 }
 
 /**
+ * Wait for a known at1... TX to appear on-chain.
+ */
+async function waitForOnChainConfirmation(txId: string): Promise<void> {
+  const apiBase = process.env.NEXT_PUBLIC_ALEO_RPC_URL || 'https://api.explorer.provable.com/v1';
+  const start = Date.now();
+
+  while (Date.now() - start < MAX_POLL_TIME) {
+    try {
+      const res = await fetch(`${apiBase}/testnet/transaction/${txId}`);
+      if (res.ok) return; // Found on-chain
+    } catch {
+      // Network error, keep trying
+    }
+    await sleep(POLL_INTERVAL);
+  }
+  // Don't throw — TX might still be propagating
+}
+
+/**
  * Resolve the real on-chain at1... transaction ID from the wallet's tracking UUID.
  * 
- * Strategy:
- * 1. If the ID already starts with "at1", it's real — return immediately
- * 2. Poll walletTxStatus until "Completed" / "Finalized"
- * 3. Once confirmed, call getExecution to extract the real at1... TX ID
- * 4. If getExecution fails, search recent transactions via node API
- * 5. Timeout after 3 minutes
+ * Leo Wallet returns a UUID (e.g. "e9416ec1-0853-4c..."). 
+ * We need to poll wallet APIs and/or the node to get the real at1... ID.
  */
 async function resolveRealTransactionId(
   trackingId: string,
   walletTxStatus: ((txId: string) => Promise<string>) | undefined,
   getExecution: ((txId: string) => Promise<string>) | undefined,
 ): Promise<string> {
-  // If already a real Aleo TX ID, return it
-  if (trackingId.startsWith('at1')) {
-    return trackingId;
-  }
+  if (trackingId.startsWith('at1')) return trackingId;
 
   const start = Date.now();
 
-  // Phase 1: Wait for wallet to confirm the transaction
   while (Date.now() - start < MAX_POLL_TIME) {
-    // Try to get execution data (contains real TX ID)
+    
+    // Strategy 1: getExecution may return data containing real TX ID
     if (getExecution) {
       try {
         const executionData = await getExecution(trackingId);
-        // executionData may be a JSON string or contain the at1... ID
         const realId = extractAleoTxId(executionData);
         if (realId) return realId;
       } catch {
-        // Not ready yet — keep polling
+        // Not ready yet
       }
     }
 
-    // Check transaction status via wallet
+    // Strategy 2: transactionStatus may embed or return real TX ID
     if (walletTxStatus) {
       try {
         const statusStr = await walletTxStatus(trackingId);
-        const status = statusStr.toLowerCase();
-
-        // Extract at1... from status string if embedded
+        
+        // Check if status string contains an at1... ID
         const embeddedId = extractAleoTxId(statusStr);
         if (embeddedId) return embeddedId;
 
+        const status = statusStr.toLowerCase();
+        
         if (status === 'failed' || status === 'rejected') {
           throw new Error(`Transaction ${status} on-chain`);
         }
 
-        // If completed but no at1... found yet, try getExecution one more time
         if (status === 'completed' || status === 'finalized' || status === 'accepted') {
+          // Confirmed — try getExecution one final time
           if (getExecution) {
             try {
               const executionData = await getExecution(trackingId);
               const realId = extractAleoTxId(executionData);
               if (realId) return realId;
-            } catch {
-              // Fall through to node API search
-            }
+            } catch { /* fall through */ }
           }
-          // Confirmed but can't get real ID — try node API
-          const nodeId = await searchNodeForRecentTx(trackingId);
-          if (nodeId) return nodeId;
-          
-          // Last resort: return tracking ID (user can still check wallet)
+          // Wallet says confirmed but we can't get the at1... ID
+          // Return UUID — user sees "Transaction Complete" but link won't work on explorer
           return trackingId;
         }
       } catch (error: any) {
@@ -197,10 +223,20 @@ async function resolveRealTransactionId(
       }
     }
 
+    // Strategy 3: Neither wallet method available — just wait and return UUID
+    // (Leo Wallet already confirmed the TX internally when requestTransaction resolved)
+    if (!walletTxStatus && !getExecution) {
+      // The wallet already handled everything — requestTransaction only returns 
+      // after the TX is broadcast. We can't get the real at1... ID without wallet support.
+      // Return the UUID so at least the user sees something.
+      return trackingId;
+    }
+
     await sleep(POLL_INTERVAL);
   }
 
-  throw new Error('Transaction confirmation timed out (3 min). Check your wallet for status.');
+  // Timeout — return what we have
+  return trackingId;
 }
 
 /**

@@ -103,15 +103,29 @@ export function TransactionModal({
                     animate={{ opacity: 1 }}
                     className="mt-4"
                   >
-                    <p className="text-xs text-white/40 mb-1">Transaction ID</p>
-                    <a 
-                      href={`https://testnet.explorer.provable.com/transaction/${txId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm font-mono text-electric hover:underline"
-                    >
-                      {txId.slice(0, 16)}...{txId.slice(-8)}
-                    </a>
+                    {txId.startsWith('at1') ? (
+                      <>
+                        <p className="text-xs text-white/40 mb-1">Transaction ID</p>
+                        <a 
+                          href={`https://testnet.explorer.provable.com/transaction/${txId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-mono text-electric hover:underline"
+                        >
+                          {txId.slice(0, 16)}...{txId.slice(-8)}
+                        </a>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xs text-white/40 mb-1">Wallet Reference</p>
+                        <p className="text-sm font-mono text-white/60">
+                          {txId.slice(0, 16)}...{txId.slice(-8)}
+                        </p>
+                        <p className="text-xs text-white/30 mt-1">
+                          Check your Leo Wallet for the on-chain transaction ID
+                        </p>
+                      </>
+                    )}
                   </motion.div>
                 )}
 
