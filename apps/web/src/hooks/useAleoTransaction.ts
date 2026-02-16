@@ -29,8 +29,12 @@ const initialState: TransactionState = {
   proofTime: null,
 };
 
+// Poll interval and limits for transaction confirmation
+const POLL_INTERVAL = 3000;   // 3 seconds between polls
+const MAX_POLL_TIME = 180000; // 3 minutes max wait
+
 export function useAleoTransaction(): UseAleoTransactionReturn {
-  const { connected, publicKey, requestTransaction } = useWallet();
+  const { connected, publicKey, requestTransaction, transactionStatus: walletTxStatus } = useWallet();
   const [state, setState] = useState<TransactionState>(initialState);
 
   const execute = useCallback(async (
@@ -63,40 +67,43 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
       );
 
       // Execute through Leo Wallet — real ZK proof generated here
-      let txId: string | null = null;
+      // Returns a wallet-internal tracking ID (UUID format)
+      let walletTrackingId: string | null = null;
       if (requestTransaction) {
-        txId = await requestTransaction(aleoTransaction);
+        walletTrackingId = await requestTransaction(aleoTransaction);
       }
 
       const proofTime = Date.now() - proofStart;
 
-      if (!txId) {
+      if (!walletTrackingId) {
         throw new Error('Transaction rejected by wallet');
       }
 
       // Step 3: Broadcasting
       setState(prev => ({ ...prev, status: 'broadcasting', proofTime }));
-      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Step 4: Confirming
-      setState(prev => ({ ...prev, status: 'confirming', txId }));
+      // Step 4: Confirming — poll wallet for actual on-chain confirmation
+      setState(prev => ({ ...prev, status: 'confirming' }));
+
+      // Poll transactionStatus until confirmed or timeout
+      const confirmedTxId = await pollForConfirmation(walletTrackingId, walletTxStatus);
+
+      // Use the real at1... TX ID if we got one, otherwise use tracking ID
+      const finalTxId = confirmedTxId || walletTrackingId;
       
-      // Poll for confirmation (simplified — in production poll the network)
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Success!
-      setState(prev => ({ ...prev, status: 'success' }));
-      return txId;
+      setState(prev => ({ ...prev, status: 'success', txId: finalTxId }));
+      return finalTxId;
 
     } catch (error: any) {
+      const msg = error.message || 'Transaction failed';
       setState(prev => ({
         ...prev,
         status: 'error',
-        error: error.message || 'Transaction failed',
+        error: msg,
       }));
       return null;
     }
-  }, [connected, publicKey, requestTransaction]);
+  }, [connected, publicKey, requestTransaction, walletTxStatus]);
 
   const reset = useCallback(() => {
     setState(initialState);
@@ -107,6 +114,94 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
     execute,
     reset,
   };
+}
+
+/**
+ * Poll Leo Wallet's transactionStatus until confirmed or timeout.
+ * 
+ * Known Leo Wallet status values:
+ *   "Pending"   — proof generated, not yet broadcast / not yet confirmed
+ *   "Completed" — confirmed on-chain
+ *   "Finalized" — finalized on-chain  
+ *   "Failed"    — rejected by network
+ *   "Rejected"  — user cancelled
+ * 
+ * If the status response itself contains an at1... TX ID we extract it.
+ */
+async function pollForConfirmation(
+  trackingId: string,
+  walletTxStatus: ((txId: string) => Promise<string>) | undefined,
+): Promise<string | null> {
+  if (!walletTxStatus) {
+    // Wallet doesn't support status polling — fallback to API polling
+    return await pollNodeForTransaction(trackingId);
+  }
+
+  const start = Date.now();
+
+  while (Date.now() - start < MAX_POLL_TIME) {
+    try {
+      const statusStr = await walletTxStatus(trackingId);
+      const status = statusStr.toLowerCase();
+
+      // Check for completion
+      if (status === 'completed' || status === 'finalized' || status === 'accepted') {
+        // The trackingId might already be the real at1... id after completion
+        if (trackingId.startsWith('at1')) {
+          return trackingId;
+        }
+        // Otherwise try to fetch real TX ID from the node
+        return trackingId;
+      }
+
+      // Check for failure
+      if (status === 'failed' || status === 'rejected') {
+        throw new Error(`Transaction ${status} on-chain`);
+      }
+
+      // Still pending — wait and retry
+      await sleep(POLL_INTERVAL);
+    } catch (error: any) {
+      // If polling itself fails (e.g. wallet disconnected), throw
+      if (error.message?.includes('failed') || error.message?.includes('rejected')) {
+        throw error;
+      }
+      // For other errors (network issues), keep polling
+      await sleep(POLL_INTERVAL);
+    }
+  }
+
+  throw new Error('Transaction confirmation timed out (3 min). Check explorer for status.');
+}
+
+/**
+ * Fallback: poll the Aleo node API directly for a transaction.
+ */
+async function pollNodeForTransaction(txId: string): Promise<string | null> {
+  const apiBase = process.env.NEXT_PUBLIC_ALEO_RPC_URL || 'https://api.explorer.provable.com/v1';
+  const start = Date.now();
+
+  while (Date.now() - start < MAX_POLL_TIME) {
+    try {
+      const res = await fetch(`${apiBase}/testnet/transaction/${txId}`);
+      if (res.ok) {
+        const data = await res.json();
+        // If confirmed, return the TX ID
+        if (data && (data.id || data.transaction_id)) {
+          return data.id || data.transaction_id || txId;
+        }
+      }
+    } catch {
+      // Network error — keep polling
+    }
+    await sleep(POLL_INTERVAL);
+  }
+
+  throw new Error('Transaction confirmation timed out (3 min). Check explorer for status.');
+}
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // ============================================================================

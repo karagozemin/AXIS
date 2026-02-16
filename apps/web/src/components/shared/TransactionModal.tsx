@@ -103,28 +103,15 @@ export function TransactionModal({
                     animate={{ opacity: 1 }}
                     className="mt-4"
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-xs text-white/40">Transaction ID</p>
-                      {txId.startsWith('at1demo') && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                          DEMO MODE
-                        </span>
-                      )}
-                    </div>
-                    {txId.startsWith('at1demo') ? (
-                      <p className="text-sm font-mono text-gray-400">
-                        {txId.slice(0, 16)}...{txId.slice(-8)}
-                      </p>
-                    ) : (
-                      <a 
-                        href={`https://testnet.explorer.provable.com/transaction/${txId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm font-mono text-electric hover:underline"
-                      >
-                        {txId.slice(0, 16)}...{txId.slice(-8)}
-                      </a>
-                    )}
+                    <p className="text-xs text-white/40 mb-1">Transaction ID</p>
+                    <a 
+                      href={`https://testnet.explorer.provable.com/transaction/${txId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-mono text-electric hover:underline"
+                    >
+                      {txId.slice(0, 16)}...{txId.slice(-8)}
+                    </a>
                   </motion.div>
                 )}
 
