@@ -1,18 +1,15 @@
 import { Hero } from '@/components/landing';
+import { HowScoreWorks } from '@/components/landing/HowScoreWorks';
+import { TrustDerivation } from '@/components/landing/TrustDerivation';
+import { DeploymentProof } from '@/components/landing/DeploymentProof';
 
 export default function Home() {
   return (
     <main>
       <Hero />
-      
-      {/* Placeholder for future sections */}
-      <section className="relative py-32 bg-void">
-        <div className="container mx-auto px-6 text-center">
-          <p className="text-white/30 font-mono text-sm tracking-widest uppercase">
-            // More sections coming soon
-          </p>
-        </div>
-      </section>
+      <HowScoreWorks />
+      <TrustDerivation />
+      <DeploymentProof />
     </main>
   );
 }
