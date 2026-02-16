@@ -151,7 +151,7 @@ export function DeploymentProof() {
                 {/* Explorer link */}
                 <div className="mt-5 pt-4 border-t border-white/5">
                   <a
-                    href={`https://explorer.aleo.org/program/${prog.name}`}
+                    href={`https://testnet.explorer.provable.com/program/${prog.name}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-xs font-mono flex items-center gap-2 hover:underline transition-colors"

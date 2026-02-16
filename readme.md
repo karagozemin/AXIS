@@ -35,8 +35,8 @@
 
 | Program | Status | Explorer |
 |---------|--------|----------|
-| `axis_score_v2.aleo` | ✅ **DEPLOYED** | [View on Explorer](https://explorer.aleo.org/program/axis_score_v2.aleo) |
-| `axis_lending_v2.aleo` | ✅ **DEPLOYED** | [View on Explorer](https://explorer.aleo.org/program/axis_lending_v2.aleo) |
+| `axis_score_v2.aleo` | ✅ **DEPLOYED** | [View on Explorer](https://testnet.explorer.provable.com/program/axis_score_v2.aleo) |
+| `axis_lending_v2.aleo` | ✅ **DEPLOYED** | [View on Explorer](https://testnet.explorer.provable.com/program/axis_lending_v2.aleo) |
 
 **Deployer**: `aleo1fzpxupyv6cmnkacw85f533wtv33lazvy386vzjsatkjgm4gfqg9sk6a375`
 
