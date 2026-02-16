@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
 import { 
   Transaction, 
@@ -30,8 +30,9 @@ const initialState: TransactionState = {
 };
 
 // Poll interval and limits for transaction confirmation
-const POLL_INTERVAL = 3000;   // 3 seconds between polls
-const MAX_POLL_TIME = 180000; // 3 minutes max wait
+const POLL_INTERVAL = 4000;   // 4 seconds between polls
+const MAX_POLL_TIME = 300000; // 5 minutes max wait
+const NODE_API = 'https://api.explorer.provable.com/v1/testnet';
 
 export function useAleoTransaction(): UseAleoTransactionReturn {
   const { 
@@ -43,6 +44,8 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
     getExecution,
   } = useWallet();
   const [state, setState] = useState<TransactionState>(initialState);
+  // Track the target program for on-chain search
+  const targetProgramRef = useRef<string | null>(null);
 
   const execute = useCallback(async (
     programId: string,
@@ -55,9 +58,12 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
       return null;
     }
 
+    targetProgramRef.current = programId;
+
     try {
       // Step 1: Preparing
       setState({ ...initialState, status: 'preparing' });
+      await sleep(300); // Brief UI feedback
 
       // Step 2: Proving (ZK proof generation via Leo Wallet)
       setState(prev => ({ ...prev, status: 'proving' }));
@@ -73,20 +79,25 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
         false // use public balance for fees
       );
 
-      // Try requestExecution first (returns real at1... TX ID on newer wallets),
-      // fall back to requestTransaction (returns UUID tracking ID)
+      console.log('[AXIS TX] Submitting to Leo Wallet:', { programId, functionName, inputs: inputs.length });
+
+      // Try requestExecution first, then fallback to requestTransaction
       let rawTxId: string | null = null;
       
       if (requestExecution) {
         try {
+          console.log('[AXIS TX] Using requestExecution...');
           rawTxId = await requestExecution(aleoTransaction);
-        } catch {
-          // requestExecution not supported, fall back
+          console.log('[AXIS TX] requestExecution returned:', rawTxId);
+        } catch (e: any) {
+          console.log('[AXIS TX] requestExecution failed:', e?.message);
         }
       }
       
       if (!rawTxId && requestTransaction) {
+        console.log('[AXIS TX] Falling back to requestTransaction...');
         rawTxId = await requestTransaction(aleoTransaction);
+        console.log('[AXIS TX] requestTransaction returned:', rawTxId);
       }
 
       const proofTime = Date.now() - proofStart;
@@ -95,32 +106,28 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
         throw new Error('Transaction rejected by wallet');
       }
 
-      // Step 3: Broadcasting  
+      // Step 3: Broadcasting — wallet already did this, brief visual step
       setState(prev => ({ ...prev, status: 'broadcasting', proofTime }));
+      await sleep(1500);
 
-      // Step 4: Confirm + resolve real TX ID
+      // Step 4: Confirm — actually wait for on-chain confirmation
       setState(prev => ({ ...prev, status: 'confirming' }));
 
-      // If we already got a real at1... ID, we're done
-      if (rawTxId.startsWith('at1')) {
-        // Still wait for on-chain confirmation
-        await waitForOnChainConfirmation(rawTxId);
-        setState(prev => ({ ...prev, status: 'success', txId: rawTxId }));
-        return rawTxId;
-      }
-
-      // We got a UUID — need to resolve real TX ID
-      const realTxId = await resolveRealTransactionId(
+      // Resolve the real on-chain TX ID
+      const realTxId = await resolveTransactionId(
         rawTxId,
+        programId,
         walletTxStatus,
         getExecution,
       );
 
+      console.log('[AXIS TX] Final TX ID:', realTxId);
       setState(prev => ({ ...prev, status: 'success', txId: realTxId }));
       return realTxId;
 
     } catch (error: any) {
       const msg = error.message || 'Transaction failed';
+      console.error('[AXIS TX] Error:', msg);
       setState(prev => ({
         ...prev,
         status: 'error',
@@ -142,16 +149,212 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
 }
 
 /**
+ * Resolve the real on-chain at1... transaction ID.
+ * 
+ * Strategy:
+ * 1. If wallet returned at1... directly, verify on-chain and return
+ * 2. Poll wallet transactionStatus(uuid) for status changes
+ * 3. On "Completed", call getExecution(uuid) to extract at1... ID  
+ * 4. In parallel, search on-chain for recent transactions to our program
+ * 5. Return whichever finds the real ID first
+ */
+async function resolveTransactionId(
+  rawId: string,
+  programId: string,
+  walletTxStatus: ((txId: string) => Promise<string>) | undefined,
+  getExecution: ((txId: string) => Promise<string>) | undefined,
+): Promise<string> {
+  // If already an at1... ID, just confirm on-chain
+  if (rawId.startsWith('at1')) {
+    console.log('[AXIS TX] Got at1 ID directly, waiting for on-chain confirmation...');
+    await waitForOnChainConfirmation(rawId);
+    return rawId;
+  }
+
+  console.log('[AXIS TX] Got wallet tracking UUID:', rawId, '— resolving real TX ID...');
+  
+  // Record the block height at submission time for on-chain search
+  let startHeight: number | null = null;
+  try {
+    const heightRes = await fetch(`${NODE_API}/latest/height`);
+    if (heightRes.ok) {
+      startHeight = parseInt(await heightRes.text());
+      console.log('[AXIS TX] Start block height:', startHeight);
+    }
+  } catch { /* ignore */ }
+
+  const start = Date.now();
+  let walletConfirmed = false;
+
+  while (Date.now() - start < MAX_POLL_TIME) {
+    // === Strategy A: Poll wallet for status ===
+    if (walletTxStatus) {
+      try {
+        const statusStr = await walletTxStatus(rawId);
+        console.log('[AXIS TX] Wallet status:', statusStr);
+
+        // Check if response contains at1... ID
+        const embeddedId = extractAleoTxId(statusStr);
+        if (embeddedId) {
+          console.log('[AXIS TX] Found at1 ID in wallet status:', embeddedId);
+          return embeddedId;
+        }
+
+        const status = statusStr?.toLowerCase?.() || '';
+
+        if (status.includes('fail') || status.includes('reject')) {
+          throw new Error(`Transaction ${status} on-chain`);
+        }
+
+        if (status.includes('complet') || status.includes('final') || status.includes('accept')) {
+          walletConfirmed = true;
+          console.log('[AXIS TX] Wallet says confirmed!');
+          
+          // Try getExecution to extract real ID
+          if (getExecution) {
+            try {
+              const execData = await getExecution(rawId);
+              console.log('[AXIS TX] getExecution returned:', typeof execData === 'string' ? execData.slice(0, 100) : execData);
+              const realId = extractAleoTxId(typeof execData === 'string' ? execData : JSON.stringify(execData));
+              if (realId) {
+                console.log('[AXIS TX] Found at1 ID from getExecution:', realId);
+                return realId;
+              }
+            } catch (e: any) {
+              console.log('[AXIS TX] getExecution error:', e?.message);
+            }
+          }
+        }
+      } catch (error: any) {
+        if (error.message?.includes('fail') || error.message?.includes('reject')) {
+          throw error;
+        }
+        console.log('[AXIS TX] transactionStatus error (may not be supported):', error?.message);
+      }
+    }
+
+    // === Strategy B: Search on-chain for the program transaction ===
+    if (startHeight) {
+      try {
+        const onChainId = await searchOnChainForProgram(programId, startHeight);
+        if (onChainId) {
+          console.log('[AXIS TX] Found at1 ID on-chain:', onChainId);
+          return onChainId;
+        }
+      } catch { /* ignore search errors */ }
+    }
+
+    // If wallet confirmed but we can't find at1... ID after extra attempts, stop
+    if (walletConfirmed) {
+      // Give it 2 more on-chain search attempts
+      for (let i = 0; i < 3; i++) {
+        await sleep(POLL_INTERVAL);
+        if (startHeight) {
+          const onChainId = await searchOnChainForProgram(programId, startHeight);
+          if (onChainId) return onChainId;
+        }
+      }
+      // Wallet confirmed but couldn't resolve at1... ID
+      console.log('[AXIS TX] Wallet confirmed but could not resolve at1 ID');
+      return rawId;
+    }
+
+    // If no wallet methods available, rely solely on on-chain search
+    if (!walletTxStatus && !getExecution) {
+      console.log('[AXIS TX] No wallet polling methods — using on-chain search only');
+      // Wait for transaction to appear on-chain (the wallet has already broadcast it)
+      // Give it at least 30 seconds of on-chain search
+      const searchStart = Date.now();
+      while (Date.now() - searchStart < 60000) {
+        await sleep(POLL_INTERVAL);
+        if (startHeight) {
+          const onChainId = await searchOnChainForProgram(programId, startHeight);
+          if (onChainId) return onChainId;
+        }
+      }
+      // Couldn't find it on-chain either
+      return rawId;
+    }
+
+    await sleep(POLL_INTERVAL);
+  }
+
+  // Timeout — return what we have
+  console.log('[AXIS TX] Timeout — returning tracking ID');
+  return rawId;
+}
+
+/**
+ * Search the Aleo blockchain for recent transactions involving a specific program.
+ * Scans blocks from startHeight to current height looking for transitions 
+ * matching the target program ID.
+ */
+async function searchOnChainForProgram(
+  programId: string,
+  startHeight: number,
+): Promise<string | null> {
+  try {
+    const heightRes = await fetch(`${NODE_API}/latest/height`);
+    if (!heightRes.ok) return null;
+    const currentHeight = parseInt(await heightRes.text());
+
+    // Search from startHeight to current, max 20 blocks at a time to avoid too many requests
+    const from = Math.max(startHeight - 2, 0); // include a couple blocks before
+    const to = currentHeight;
+    
+    if (to - from > 100) return null; // Safety: don't scan too many blocks
+
+    for (let h = to; h >= from; h--) {
+      try {
+        const blockRes = await fetch(`${NODE_API}/block/${h}`);
+        if (!blockRes.ok) continue;
+        
+        const block = await blockRes.json();
+        const txns = block?.transactions;
+        if (!txns || !Array.isArray(txns) || txns.length === 0) continue;
+
+        for (const confirmed of txns) {
+          const tx = confirmed?.transaction;
+          if (!tx || typeof tx !== 'object') continue;
+          
+          const execution = tx.execution;
+          if (!execution || typeof execution !== 'object') continue;
+
+          const transitions = execution.transitions;
+          if (!transitions || !Array.isArray(transitions)) continue;
+
+          for (const tr of transitions) {
+            if (tr.program === programId) {
+              const txId = tx.id;
+              if (txId && typeof txId === 'string' && txId.startsWith('at1')) {
+                return txId;
+              }
+            }
+          }
+        }
+      } catch {
+        // Individual block fetch failed, continue
+      }
+    }
+  } catch {
+    // API error
+  }
+  return null;
+}
+
+/**
  * Wait for a known at1... TX to appear on-chain.
  */
 async function waitForOnChainConfirmation(txId: string): Promise<void> {
-  const apiBase = process.env.NEXT_PUBLIC_ALEO_RPC_URL || 'https://api.explorer.provable.com/v1';
   const start = Date.now();
 
   while (Date.now() - start < MAX_POLL_TIME) {
     try {
-      const res = await fetch(`${apiBase}/testnet/transaction/${txId}`);
-      if (res.ok) return; // Found on-chain
+      const res = await fetch(`${NODE_API}/transaction/${txId}`);
+      if (res.ok) {
+        console.log('[AXIS TX] Confirmed on-chain:', txId);
+        return;
+      }
     } catch {
       // Network error, keep trying
     }
@@ -161,114 +364,13 @@ async function waitForOnChainConfirmation(txId: string): Promise<void> {
 }
 
 /**
- * Resolve the real on-chain at1... transaction ID from the wallet's tracking UUID.
- * 
- * Leo Wallet returns a UUID (e.g. "e9416ec1-0853-4c..."). 
- * We need to poll wallet APIs and/or the node to get the real at1... ID.
+ * Extract an at1... transaction ID from any string
  */
-async function resolveRealTransactionId(
-  trackingId: string,
-  walletTxStatus: ((txId: string) => Promise<string>) | undefined,
-  getExecution: ((txId: string) => Promise<string>) | undefined,
-): Promise<string> {
-  if (trackingId.startsWith('at1')) return trackingId;
-
-  const start = Date.now();
-
-  while (Date.now() - start < MAX_POLL_TIME) {
-    
-    // Strategy 1: getExecution may return data containing real TX ID
-    if (getExecution) {
-      try {
-        const executionData = await getExecution(trackingId);
-        const realId = extractAleoTxId(executionData);
-        if (realId) return realId;
-      } catch {
-        // Not ready yet
-      }
-    }
-
-    // Strategy 2: transactionStatus may embed or return real TX ID
-    if (walletTxStatus) {
-      try {
-        const statusStr = await walletTxStatus(trackingId);
-        
-        // Check if status string contains an at1... ID
-        const embeddedId = extractAleoTxId(statusStr);
-        if (embeddedId) return embeddedId;
-
-        const status = statusStr.toLowerCase();
-        
-        if (status === 'failed' || status === 'rejected') {
-          throw new Error(`Transaction ${status} on-chain`);
-        }
-
-        if (status === 'completed' || status === 'finalized' || status === 'accepted') {
-          // Confirmed — try getExecution one final time
-          if (getExecution) {
-            try {
-              const executionData = await getExecution(trackingId);
-              const realId = extractAleoTxId(executionData);
-              if (realId) return realId;
-            } catch { /* fall through */ }
-          }
-          // Wallet says confirmed but we can't get the at1... ID
-          // Return UUID — user sees "Transaction Complete" but link won't work on explorer
-          return trackingId;
-        }
-      } catch (error: any) {
-        if (error.message?.includes('failed') || error.message?.includes('rejected')) {
-          throw error;
-        }
-      }
-    }
-
-    // Strategy 3: Neither wallet method available — just wait and return UUID
-    // (Leo Wallet already confirmed the TX internally when requestTransaction resolved)
-    if (!walletTxStatus && !getExecution) {
-      // The wallet already handled everything — requestTransaction only returns 
-      // after the TX is broadcast. We can't get the real at1... ID without wallet support.
-      // Return the UUID so at least the user sees something.
-      return trackingId;
-    }
-
-    await sleep(POLL_INTERVAL);
-  }
-
-  // Timeout — return what we have
-  return trackingId;
-}
-
-/**
- * Extract an at1... transaction ID from any string (status response, execution data, etc.)
- */
-function extractAleoTxId(data: string): string | null {
+function extractAleoTxId(data: any): string | null {
   if (!data) return null;
-  // Aleo TX IDs are "at1" followed by 58 alphanumeric chars
-  const match = data.match(/at1[a-z0-9]{58,62}/i);
+  const str = typeof data === 'string' ? data : JSON.stringify(data);
+  const match = str.match(/at1[a-z0-9]{58,62}/i);
   return match ? match[0] : null;
-}
-
-/**
- * Search Aleo node API for a recent transaction (fallback when wallet doesn't provide real TX ID)
- */
-async function searchNodeForRecentTx(trackingId: string): Promise<string | null> {
-  const apiBase = process.env.NEXT_PUBLIC_ALEO_RPC_URL || 'https://api.explorer.provable.com/v1';
-  
-  try {
-    // Try direct lookup with the tracking ID
-    const res = await fetch(`${apiBase}/testnet/transaction/${trackingId}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.id) return data.id;
-      const textId = extractAleoTxId(JSON.stringify(data));
-      if (textId) return textId;
-    }
-  } catch {
-    // Not found — expected for UUID tracking IDs
-  }
-
-  return null;
 }
 
 function sleep(ms: number) {

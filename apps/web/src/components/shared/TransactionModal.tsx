@@ -97,7 +97,7 @@ export function TransactionModal({
                 </motion.div>
 
                 {/* Transaction ID */}
-                {txId && (
+                {txId && status === 'success' && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -110,22 +110,41 @@ export function TransactionModal({
                           href={`https://testnet.explorer.provable.com/transaction/${txId}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm font-mono text-electric hover:underline"
+                          className="text-sm font-mono text-electric hover:underline break-all"
                         >
-                          {txId.slice(0, 16)}...{txId.slice(-8)}
+                          {txId.slice(0, 20)}...{txId.slice(-12)}
                         </a>
+                        <p className="text-xs text-green-400/60 mt-2 flex items-center justify-center gap-1">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                          Verified on Aleo Testnet
+                        </p>
                       </>
                     ) : (
                       <>
-                        <p className="text-xs text-white/40 mb-1">Wallet Reference</p>
+                        <p className="text-xs text-white/40 mb-1">Transaction Submitted</p>
                         <p className="text-sm font-mono text-white/60">
                           {txId.slice(0, 16)}...{txId.slice(-8)}
                         </p>
                         <p className="text-xs text-white/30 mt-1">
-                          Check your Leo Wallet for the on-chain transaction ID
+                          Transaction confirmed by Leo Wallet. Check wallet activity for on-chain details.
                         </p>
                       </>
                     )}
+                  </motion.div>
+                )}
+
+                {/* Confirming state — show scanning animation */}
+                {status === 'confirming' && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="mt-3"
+                  >
+                    <p className="text-xs text-electric/80 font-mono">
+                      Scanning Aleo blocks for confirmation...
+                    </p>
                   </motion.div>
                 )}
 
