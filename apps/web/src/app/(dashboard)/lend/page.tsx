@@ -1,6 +1,7 @@
 'use client';
 
 import { DepositForm, LPPositions } from '@/components/lend';
+import { DepositPrivacyShield } from '@/components/shared';
 
 export default function LendPage() {
   return (
@@ -82,10 +83,13 @@ export default function LendPage() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-accent-gold" />
-                <span className="text-xs">Reserve fund: 5% of TVL</span>
+                <span className="text-xs">Insurance fund: 5% of every deposit</span>
               </div>
             </div>
           </div>
+
+          {/* Privacy Shield */}
+          <DepositPrivacyShield />
         </div>
       </div>
 

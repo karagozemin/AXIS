@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { LiquidityPool, CreditScoreCard } from '@/components/dashboard';
 import { GlassCard } from '@/components/shared/GlassCard';
 import { GradientText } from '@/components/shared/GradientText';
+import { ScorePrivacyShield } from '@/components/shared';
 import { useLoanContext } from '@/contexts/LoanContext';
 import Link from 'next/link';
 
@@ -42,8 +43,9 @@ export default function VaultsPage() {
         </div>
 
         {/* Credit Score Card */}
-        <div className="col-span-12 lg:col-span-4">
+        <div className="col-span-12 lg:col-span-4 space-y-6">
           <CreditScoreCard />
+          <ScorePrivacyShield />
         </div>
 
         {/* Quick Stats */}

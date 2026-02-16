@@ -165,86 +165,180 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
   };
 }
 
-// Specific hooks for AXIS programs
+// ============================================================================
+// AXIS v2 Program Hooks
+// ============================================================================
+
+// Program IDs — v2
+const SCORE_PROGRAM = 'axis_score_v2.aleo';
+const LENDING_PROGRAM = 'axis_lending_v2.aleo';
+
+// Set to false once contracts are deployed to testnet
+const DEMO_MODE = true;
+
+// ── Credit Score Hook ──────────────────────────────────────────────────────
+
+export interface CreditFactors {
+  repaymentHistory: number;      // 0-100: % of loans repaid on time
+  positionDuration: number;      // 0-100: months active (capped)
+  utilizationRate: number;       // 0-100: current utilization %
+  protocolInteractions: number;  // 0-100: interaction frequency (capped)
+  collateralDiversity: number;   // 0-100: diversity index (capped)
+}
+
 export function useCreditScore() {
   const tx = useAleoTransaction();
   const { publicKey } = useWallet();
 
-  // Demo mode flag - set to false when programs are deployed
-  const DEMO_MODE = true;
-
-  const mintCredibility = useCallback(async (bondAmount: string) => {
+  // Compute a privacy-preserving credit score using the 5-factor model.
+  // All inputs remain private inside the ZK circuit.
+  const computeCredibility = useCallback(async (factors: CreditFactors) => {
     if (!publicKey) return null;
-    
+
     if (DEMO_MODE) {
-      return tx.executeDemo('axis_score_v1.aleo', 'mint_credibility');
+      return tx.executeDemo(SCORE_PROGRAM, 'compute_credibility');
     }
-    
+
     const currentTime = Math.floor(Date.now() / 1000).toString();
     return tx.execute(
-      'axis_score_v1.aleo',
-      'mint_credibility',
-      [publicKey, `${bondAmount}u64`, '50u64', '80u64', `${currentTime}u64`]
+      SCORE_PROGRAM,
+      'compute_credibility',
+      [
+        publicKey,
+        `${factors.repaymentHistory}u64`,
+        `${factors.positionDuration}u64`,
+        `${factors.utilizationRate}u64`,
+        `${factors.protocolInteractions}u64`,
+        `${factors.collateralDiversity}u64`,
+        `${currentTime}u64`,
+      ]
     );
   }, [publicKey, tx]);
 
+  // Verify that a CreditBond meets a minimum threshold (private check).
   const verifyThreshold = useCallback(async (minScore: number) => {
     if (!publicKey) return null;
-    
+
     if (DEMO_MODE) {
-      return tx.executeDemo('axis_score_v1.aleo', 'verify_threshold');
+      return tx.executeDemo(SCORE_PROGRAM, 'verify_threshold');
     }
-    
+
     return tx.execute(
-      'axis_score_v1.aleo',
+      SCORE_PROGRAM,
       'verify_threshold',
       [`${minScore}u64`]
     );
   }, [publicKey, tx]);
 
+  // Generate an AuditToken for a verifier (lending pool).
+  // Proves "score >= threshold" without revealing the actual score.
+  const createAuditToken = useCallback(async (verifierAddress: string, requiredScore: number) => {
+    if (!publicKey) return null;
+
+    if (DEMO_MODE) {
+      return tx.executeDemo(SCORE_PROGRAM, 'create_audit_token');
+    }
+
+    const currentTime = Math.floor(Date.now() / 1000).toString();
+    return tx.execute(
+      SCORE_PROGRAM,
+      'create_audit_token',
+      [verifierAddress, `${requiredScore}u64`, `${currentTime}u64`]
+    );
+  }, [publicKey, tx]);
+
+  // Commit score hash on-chain (proves freshness without revealing score).
+  const commitScore = useCallback(async () => {
+    if (!publicKey) return null;
+
+    if (DEMO_MODE) {
+      return tx.executeDemo(SCORE_PROGRAM, 'commit_score');
+    }
+
+    return tx.execute(SCORE_PROGRAM, 'commit_score', []);
+  }, [publicKey, tx]);
+
   return {
     ...tx,
-    mintCredibility,
+    computeCredibility,
     verifyThreshold,
+    createAuditToken,
+    commitScore,
   };
 }
+
+// ── Lending Hook ───────────────────────────────────────────────────────────
+
+export type LendingTier = 1 | 2 | 3;
 
 export function useLending() {
   const tx = useAleoTransaction();
   const { publicKey } = useWallet();
 
-  // Demo mode flag - set to false when programs are deployed
-  const DEMO_MODE = true;
-
-  const deposit = useCallback(async (amount: string) => {
+  // Deposit liquidity into the Axis pool.
+  // 5% automatically goes to the Insurance Fund.
+  const deposit = useCallback(async (amount: string, lockDays: number = 30) => {
     if (!publicKey) return null;
-    
+
     if (DEMO_MODE) {
-      // Simulate transaction for demo
-      return tx.executeDemo('axis_lending_v1.aleo', 'seed_the_axis');
+      return tx.executeDemo(LENDING_PROGRAM, 'seed_the_axis');
     }
-    
+
     const currentTime = Math.floor(Date.now() / 1000).toString();
     return tx.execute(
-      'axis_lending_v1.aleo',
+      LENDING_PROGRAM,
       'seed_the_axis',
-      [publicKey, `${amount}u64`, `${currentTime}u64`]
+      [publicKey, `${amount}u64`, `${lockDays}u64`, `${currentTime}u64`]
     );
   }, [publicKey, tx]);
 
-  const borrow = useCallback(async (amount: string, collateral: string) => {
+  // Borrow from the pool with tier-based collateral requirements.
+  //   Tier 1 (Elite): 50% collateral, 3.5% APR
+  //   Tier 2 (Core):  75% collateral, 5.0% APR
+  //   Tier 3 (Entry): 90% collateral, 8.0% APR
+  const borrow = useCallback(async (amount: string, collateral: string, tier: LendingTier = 3) => {
     if (!publicKey) return null;
-    
+
     if (DEMO_MODE) {
-      // Simulate transaction for demo
-      return tx.executeDemo('axis_lending_v1.aleo', 'access_liquidity');
+      return tx.executeDemo(LENDING_PROGRAM, 'access_liquidity');
     }
-    
+
     const currentTime = Math.floor(Date.now() / 1000).toString();
     return tx.execute(
-      'axis_lending_v1.aleo',
+      LENDING_PROGRAM,
       'access_liquidity',
-      [publicKey, `${amount}u64`, `${collateral}u64`, `${currentTime}u64`]
+      [publicKey, `${amount}u64`, `${collateral}u64`, `${tier}u8`, `${currentTime}u64`]
+    );
+  }, [publicKey, tx]);
+
+  // Repay a loan in full.
+  const repay = useCallback(async (repayAmount: string) => {
+    if (!publicKey) return null;
+
+    if (DEMO_MODE) {
+      return tx.executeDemo(LENDING_PROGRAM, 'repay_loan');
+    }
+
+    return tx.execute(
+      LENDING_PROGRAM,
+      'repay_loan',
+      [`${repayAmount}u64`]
+    );
+  }, [publicKey, tx]);
+
+  // Withdraw liquidity (after lock period expires).
+  const withdraw = useCallback(async () => {
+    if (!publicKey) return null;
+
+    if (DEMO_MODE) {
+      return tx.executeDemo(LENDING_PROGRAM, 'withdraw_liquidity');
+    }
+
+    const currentTime = Math.floor(Date.now() / 1000).toString();
+    return tx.execute(
+      LENDING_PROGRAM,
+      'withdraw_liquidity',
+      [`${currentTime}u64`]
     );
   }, [publicKey, tx]);
 
@@ -252,5 +346,7 @@ export function useLending() {
     ...tx,
     deposit,
     borrow,
+    repay,
+    withdraw,
   };
 }

@@ -1,0 +1,6 @@
+{
+  "program": "axis_lending_v2.aleo",
+  "version": "0.2.0",
+  "description": "AXIS Protocol v2 — Under-collateralized lending with tier-based LTV ratios, insurance fund, risk management, and privacy-preserving loan lifecycle.",
+  "license": "MIT"
+}

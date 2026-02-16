@@ -193,12 +193,70 @@ export function CreditScoreCard({
           exit={{ opacity: 0, height: 0 }}
           className="mt-4 p-4 rounded-lg bg-void-300/50 border border-electric/20"
         >
-          <p className="text-xs text-white/40 mb-2">Zero-Knowledge Proof</p>
-          <div className="font-mono text-xs text-electric break-all">
-            proof1qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgp...
+          <p className="text-xs text-white/40 mb-3">Zero-Knowledge Proof Details</p>
+          
+          {/* 5-Factor Breakdown */}
+          <div className="space-y-2 mb-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-white/60">Repayment History (35%)</span>
+              <div className="flex items-center gap-2">
+                <div className="w-20 h-1.5 bg-void-300 rounded-full overflow-hidden">
+                  <div className="h-full bg-electric rounded-full" style={{ width: '92%' }} />
+                </div>
+                <span className="text-electric font-mono w-8 text-right">ZK</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-white/60">Position Duration (25%)</span>
+              <div className="flex items-center gap-2">
+                <div className="w-20 h-1.5 bg-void-300 rounded-full overflow-hidden">
+                  <div className="h-full bg-electric rounded-full" style={{ width: '78%' }} />
+                </div>
+                <span className="text-electric font-mono w-8 text-right">ZK</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-white/60">Utilization Rate (20%)</span>
+              <div className="flex items-center gap-2">
+                <div className="w-20 h-1.5 bg-void-300 rounded-full overflow-hidden">
+                  <div className="h-full bg-electric rounded-full" style={{ width: '65%' }} />
+                </div>
+                <span className="text-electric font-mono w-8 text-right">ZK</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-white/60">Protocol Loyalty (10%)</span>
+              <div className="flex items-center gap-2">
+                <div className="w-20 h-1.5 bg-void-300 rounded-full overflow-hidden">
+                  <div className="h-full bg-electric rounded-full" style={{ width: '85%' }} />
+                </div>
+                <span className="text-electric font-mono w-8 text-right">ZK</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-white/60">Collateral Diversity (10%)</span>
+              <div className="flex items-center gap-2">
+                <div className="w-20 h-1.5 bg-void-300 rounded-full overflow-hidden">
+                  <div className="h-full bg-electric rounded-full" style={{ width: '70%' }} />
+                </div>
+                <span className="text-electric font-mono w-8 text-right">ZK</span>
+              </div>
+            </div>
           </div>
-          <div className="mt-2 text-xs text-white/60">
-            ✓ Score verified without revealing transaction history
+
+          {/* Proof Hash */}
+          <div className="font-mono text-xs text-electric/70 break-all bg-void-300/50 p-2 rounded">
+            proof1qyqszqgpqyqszqgpqyqszqg...
+          </div>
+          <div className="mt-2 space-y-1">
+            <div className="text-xs text-white/60 flex justify-between">
+              <span>✓ Score verified in ZK circuit</span>
+              <span className="text-electric">axis_score_v2.aleo</span>
+            </div>
+            <div className="text-xs text-white/40 flex justify-between">
+              <span>Commitment: BHP256::hash(score)</span>
+              <span>On-chain ✓</span>
+            </div>
           </div>
         </motion.div>
       )}

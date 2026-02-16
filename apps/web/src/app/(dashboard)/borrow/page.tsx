@@ -2,6 +2,7 @@
 
 import { BorrowForm } from '@/components/borrow';
 import { CreditScoreCard } from '@/components/dashboard';
+import { BorrowPrivacyShield } from '@/components/shared';
 
 export default function BorrowPage() {
   return (
@@ -26,31 +27,49 @@ export default function BorrowPage() {
           {/* Credit Score */}
           <CreditScoreCard />
 
-          {/* Loan Terms Info */}
+          {/* Privacy Shield */}
+          <BorrowPrivacyShield />
+
+          {/* v2 Tier-Based Loan Terms */}
           <div className="bg-midnight-800/30 backdrop-blur-sm border border-midnight-700 rounded-xl p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Loan Terms</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Base APR</span>
-                <span className="text-white">8.5%</span>
+            <h3 className="text-lg font-semibold text-white mb-4">v2 Tier-Based Terms</h3>
+            <div className="space-y-3">
+              {/* Tier 1 */}
+              <div className="p-3 rounded-lg bg-electric/5 border border-electric/20">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-semibold text-electric">Axis Elite</span>
+                  <span className="text-xs text-electric bg-electric/10 px-2 py-0.5 rounded">≥ 720</span>
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                  <div><span className="text-gray-500">Collateral</span><br/><span className="text-white">50%</span></div>
+                  <div><span className="text-gray-500">LTV</span><br/><span className="text-white">200%</span></div>
+                  <div><span className="text-gray-500">APR</span><br/><span className="text-white">3.5%</span></div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Max LTV</span>
-                <span className="text-white">150% (under-collateralized)</span>
+              {/* Tier 2 */}
+              <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-semibold text-amber-400">Core</span>
+                  <span className="text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">620-719</span>
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                  <div><span className="text-gray-500">Collateral</span><br/><span className="text-white">75%</span></div>
+                  <div><span className="text-gray-500">LTV</span><br/><span className="text-white">133%</span></div>
+                  <div><span className="text-gray-500">APR</span><br/><span className="text-white">5.0%</span></div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Loan Duration</span>
-                <span className="text-white">Up to 90 days</span>
+              {/* Tier 3 */}
+              <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/20">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-semibold text-red-400">Entry</span>
+                  <span className="text-xs text-red-400 bg-red-500/10 px-2 py-0.5 rounded">{'< 620'}</span>
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                  <div><span className="text-gray-500">Collateral</span><br/><span className="text-white">90%</span></div>
+                  <div><span className="text-gray-500">LTV</span><br/><span className="text-white">111%</span></div>
+                  <div><span className="text-gray-500">APR</span><br/><span className="text-white">8.0%</span></div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Origination Fee</span>
-                <span className="text-white">0.5%</span>
-              </div>
-            </div>
-            <div className="mt-4 pt-4 border-t border-midnight-700">
-              <p className="text-xs text-gray-500">
-                Terms vary based on your Credit Tier. Higher tiers unlock better rates and higher limits.
-              </p>
             </div>
           </div>
 

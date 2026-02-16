@@ -44,15 +44,18 @@ export function BorrowForm({
   const { addLoan } = useLoanContext();
 
   const tier = getCreditTier(creditScore);
-  
-  // Calculate loan terms based on credit score
-  const collateralRatio = 90 - (tier.tier * 10); // Tier 5 = 40%, Tier 1 = 80%
+
+  // ── v2 Tier-based collateral & interest rates ──
+  // Matches axis_lending_v2.aleo access_liquidity logic:
+  //   Tier 1 (Axis Elite, score >= 720): 50% collateral, 3.5% APR
+  //   Tier 2 (Core, 620-719):            75% collateral, 5.0% APR
+  //   Tier 3 (Entry, < 620):             90% collateral, 8.0% APR
+  const lendingTier = creditScore >= 720 ? 1 : creditScore >= 620 ? 2 : 3;
+  const collateralRatio = lendingTier === 1 ? 50 : lendingTier === 2 ? 75 : 90;
   const requiredCollateral = (borrowAmount * collateralRatio) / 100;
-  
-  // Interest rate based on tier (lower tier = higher rate)
-  const baseRate = 5; // 5% base
-  const rateReduction = (tier.tier - 1) * 0.75; // 0.75% reduction per tier above 1
-  const interestRate = baseRate - rateReduction;
+  const interestRate = lendingTier === 1 ? 3.5 : lendingTier === 2 ? 5.0 : 8.0;
+  const ltvRatio = lendingTier === 1 ? '200%' : lendingTier === 2 ? '133%' : '111%';
+  const tierLabel = lendingTier === 1 ? 'Axis Elite' : lendingTier === 2 ? 'Core' : 'Entry';
   
   // Calculate interest for duration
   const durationDays = duration === '7d' ? 7 : duration === '30d' ? 30 : 90;
@@ -70,10 +73,11 @@ export function BorrowForm({
 
     setShowTxModal(true);
     
-    // Execute the borrow transaction
+    // Execute the borrow transaction (v2: includes tier for collateral validation)
     const result = await borrow(
       String(borrowAmount * 1_000_000), // Convert to microcredits
-      String(requiredCollateral * 1_000_000)
+      String(requiredCollateral * 1_000_000),
+      lendingTier as 1 | 2 | 3
     );
     
     if (result) {
@@ -248,7 +252,7 @@ export function BorrowForm({
               </div>
               <div>
                 <p className="text-sm text-white/60">Required Collateral</p>
-                <p className="text-xs text-white/40">{collateralRatio}% ratio (Tier {tier.tier})</p>
+                <p className="text-xs text-white/40">{collateralRatio}% ratio · {tierLabel} · {ltvRatio} LTV</p>
               </div>
             </div>
             <div className="text-right">

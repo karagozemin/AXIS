@@ -1,0 +1,120 @@
+{
+  "type": "deploy",
+  "id": "at1x2403ekwqedg0suz8fq2nhkr6qc22humvrhjkk4t5cm6jat8tvxs8tj3cy",
+  "owner": {
+    "address": "aleo1fzpxupyv6cmnkacw85f533wtv33lazvy386vzjsatkjgm4gfqg9sk6a375",
+    "signature": "sign1mtppshlhhc8g3y6fd7sfkxvx6cmu8r08488hpa5wc024fw2pkqq7gs85t4yn6sdq2gt0m62lj7j9vqv8jcclxyl2clk6uzvhqh60uqn9xph4d24erzgmv0tdfjk03qa0mc8ahxlgpeq85ec5dwf977r7qk4m6hfthjkhjqn9azccmtesayy57qq97hz9ahw80a85a4y6tqnqwemyhdp"
+  },
+  "deployment": {
+    "edition": 0,
+    "program": "program axis_lending_v2.aleo;\n\nrecord LoanTicket:\n    owner as address.private;\n    loan_id as field.private;\n    principal as u64.private;\n    collateral as u64.private;\n    interest_rate_bps as u64.private;\n    tier as u8.private;\n    start_time as u64.private;\n    due_time as u64.private;\n\nrecord LiquidityReceipt:\n    owner as address.private;\n    receipt_id as field.private;\n    amount as u64.private;\n    pool_share_bps as u64.private;\n    deposited_at as u64.private;\n    lock_until as u64.private;\n\nmapping total_liquidity:\n    key as u8.public;\n    value as u64.public;\n\nmapping total_borrowed:\n    key as u8.public;\n    value as u64.public;\n\nmapping total_collateral:\n    key as u8.public;\n    value as u64.public;\n\nmapping insurance_fund:\n    key as u8.public;\n    value as u64.public;\n\nmapping active_loans:\n    key as field.public;\n    value as boolean.public;\n\nmapping tier_borrowed:\n    key as u8.public;\n    value as u64.public;\n\nmapping loans_originated:\n    key as u8.public;\n    value as u64.public;\n\nmapping loans_repaid:\n    key as u8.public;\n    value as u64.public;\n\nfunction seed_the_axis:\n    input r0 as address.private;\n    input r1 as u64.private;\n    input r2 as u64.private;\n    input r3 as u64.private;\n    gte r1 1000000u64 into r4;\n    assert.eq r4 true;\n    gte r2 7u64 into r5;\n    assert.eq r5 true;\n    div r1 20u64 into r6;\n    sub r1 r6 into r7;\n    div r7 100u64 into r8;\n    mul r2 86400u64 into r9;\n    add r3 r9 into r10;\n    hash.bhp256 r3 into r11 as field;\n    cast r0 r11 r7 r8 r3 r10 into r12 as LiquidityReceipt.record;\n    async seed_the_axis r7 r6 into r13;\n    output r12 as LiquidityReceipt.record;\n    output r13 as axis_lending_v2.aleo/seed_the_axis.future;\n\nfinalize seed_the_axis:\n    input r0 as u64.public;\n    input r1 as u64.public;\n    get.or_use total_liquidity[0u8] 0u64 into r2;\n    add r2 r0 into r3;\n    set r3 into total_liquidity[0u8];\n    get.or_use insurance_fund[0u8] 0u64 into r4;\n    add r4 r1 into r5;\n    set r5 into insurance_fund[0u8];\n\nfunction access_liquidity:\n    input r0 as address.private;\n    input r1 as u64.private;\n    input r2 as u64.private;\n    input r3 as u8.private;\n    input r4 as u64.private;\n    gte r1 100000u64 into r5;\n    assert.eq r5 true;\n    div r1 2u64 into r6;\n    mul r1 3u64 into r7;\n    div r7 4u64 into r8;\n    mul r1 9u64 into r9;\n    div r9 10u64 into r10;\n    is.eq r3 1u8 into r11;\n    gte r2 r6 into r12;\n    and r11 r12 into r13;\n    is.eq r3 2u8 into r14;\n    gte r2 r8 into r15;\n    and r14 r15 into r16;\n    is.eq r3 3u8 into r17;\n    gte r2 r10 into r18;\n    and r17 r18 into r19;\n    or r13 r16 into r20;\n    or r20 r19 into r21;\n    assert.eq r21 true;\n    ternary r14 500u64 800u64 into r22;\n    ternary r11 350u64 r22 into r23;\n    hash.bhp256 r4 into r24 as field;\n    add r4 2592000u64 into r25;\n    cast r0 r24 r1 r2 r23 r3 r4 r25 into r26 as LoanTicket.record;\n    async access_liquidity r24 r1 r2 r3 into r27;\n    output r26 as LoanTicket.record;\n    output r27 as axis_lending_v2.aleo/access_liquidity.future;\n\nfinalize access_liquidity:\n    input r0 as field.public;\n    input r1 as u64.public;\n    input r2 as u64.public;\n    input r3 as u8.public;\n    get.or_use total_borrowed[0u8] 0u64 into r4;\n    add r4 r1 into r5;\n    set r5 into total_borrowed[0u8];\n    get.or_use total_collateral[0u8] 0u64 into r6;\n    add r6 r2 into r7;\n    set r7 into total_collateral[0u8];\n    get.or_use tier_borrowed[r3] 0u64 into r8;\n    add r8 r1 into r9;\n    set r9 into tier_borrowed[r3];\n    set true into active_loans[r0];\n    get.or_use loans_originated[0u8] 0u64 into r10;\n    add r10 1u64 into r11;\n    set r11 into loans_originated[0u8];\n\nfunction repay_loan:\n    input r0 as LoanTicket.record;\n    input r1 as u64.private;\n    gte r1 r0.principal into r2;\n    assert.eq r2 true;\n    async repay_loan r0.loan_id r0.principal r0.collateral r0.tier into r3;\n    output r3 as axis_lending_v2.aleo/repay_loan.future;\n\nfinalize repay_loan:\n    input r0 as field.public;\n    input r1 as u64.public;\n    input r2 as u64.public;\n    input r3 as u8.public;\n    get.or_use total_borrowed[0u8] 0u64 into r4;\n    gte r4 r1 into r5;\n    sub r4 r1 into r6;\n    ternary r5 r6 0u64 into r7;\n    set r7 into total_borrowed[0u8];\n    get.or_use total_collateral[0u8] 0u64 into r8;\n    gte r8 r2 into r9;\n    sub r8 r2 into r10;\n    ternary r9 r10 0u64 into r11;\n    set r11 into total_collateral[0u8];\n    get.or_use tier_borrowed[r3] 0u64 into r12;\n    gte r12 r1 into r13;\n    sub r12 r1 into r14;\n    ternary r13 r14 0u64 into r15;\n    set r15 into tier_borrowed[r3];\n    set false into active_loans[r0];\n    get.or_use loans_repaid[0u8] 0u64 into r16;\n    add r16 1u64 into r17;\n    set r17 into loans_repaid[0u8];\n\nfunction flag_default:\n    input r0 as LoanTicket.record;\n    async flag_default r0.loan_id r0.principal r0.collateral r0.tier into r1;\n    output r1 as axis_lending_v2.aleo/flag_default.future;\n\nfinalize flag_default:\n    input r0 as field.public;\n    input r1 as u64.public;\n    input r2 as u64.public;\n    input r3 as u8.public;\n    get.or_use total_borrowed[0u8] 0u64 into r4;\n    gte r4 r1 into r5;\n    sub r4 r1 into r6;\n    ternary r5 r6 0u64 into r7;\n    set r7 into total_borrowed[0u8];\n    get.or_use total_collateral[0u8] 0u64 into r8;\n    gte r8 r2 into r9;\n    sub r8 r2 into r10;\n    ternary r9 r10 0u64 into r11;\n    set r11 into total_collateral[0u8];\n    get.or_use insurance_fund[0u8] 0u64 into r12;\n    add r12 r2 into r13;\n    set r13 into insurance_fund[0u8];\n    get.or_use tier_borrowed[r3] 0u64 into r14;\n    gte r14 r1 into r15;\n    sub r14 r1 into r16;\n    ternary r15 r16 0u64 into r17;\n    set r17 into tier_borrowed[r3];\n    set false into active_loans[r0];\n\nfunction withdraw_liquidity:\n    input r0 as LiquidityReceipt.record;\n    input r1 as u64.private;\n    gte r1 r0.lock_until into r2;\n    assert.eq r2 true;\n    async withdraw_liquidity r0.amount into r3;\n    output r3 as axis_lending_v2.aleo/withdraw_liquidity.future;\n\nfinalize withdraw_liquidity:\n    input r0 as u64.public;\n    get.or_use total_liquidity[0u8] 0u64 into r1;\n    gte r1 r0 into r2;\n    sub r1 r0 into r3;\n    ternary r2 r3 0u64 into r4;\n    set r4 into total_liquidity[0u8];\n",
+    "verifying_keys": [
+      [
+        "seed_the_axis",
+        [
+          "verifier1qygqqqqqqqqqqqzv5sqqqqqqqqq88fqqqqqqqqqqpe7szqqqqqqqpqavqyqqqqqqqr40sqqqqqqqqqqvqqqqqqqqqqq80w6m2ec80qsl8dmmfcx5jke4x0u4cy44ck9a2zzj35ngxul57rkgayt5sfc3asn2a3kgs3mtskspnl22ccdczqnlrrhk9505aydjlw6jn304f76mmurjrrl47gnreuszz3uhfvvc5l0mqhrlrxfsavxsqsqy6ulnmcggzd6pv0tlysguffvmsnrtgtp4wmmd5m0mjd5lp9y43adjs0znjjdc0ttgsyu9q6cmqx589jxp8wta98gw9smtxuktdqdu0fglem4l20aegclpkdajn5j4f96pzyeq6s6uc23cew5748mlvq9u4y2gg82fzcmxrzm9t7mdhuma4ajfs6tvxurxhcta8r5vext3n9f3gpdzqg3qa4wnzw9c4ae83jqgzy7k3nmlq8wg457wnhxnq3xd60c9h27u69pv3jqmvmztcnq28l5lqcn3cfwwpc990c7lzc30w5vpnjeet4seqwfx66s0x9zevx0qt3jpghswvgjwhp5ette2ewxfu6fsl6y5ul0s0hpjy20j39cnw6ygrdnz77tdejfx80r2z589fue8n3h8tge5pu775gs57he2cd7fzfzcgufrfzzetk27u6d2lmr2r0nnsp7d87hk5rhvwszsz3cn0zrqq4ne2uztdj4pqx3lj49pf3exettdy0hzy4ufwr0chsdl43fqf0ng2q98sdq8868w8hrxk6fpgfdrtrrfp593jjzu2t3e3fn9rvdn9d54jthdpef5cett70c6l42c3suxpvq7r83lqxj2hqckp6s6v3rv2c9s4tny99lc6zwmjtyegjr7augr7pch3pnugr62sm6hyccdr03yqkspk98ell03ngexhr38ayemecfnrd64cftvn3ah3a0tm4q30ewndkc0hddaetw0ycqwr8ze9nxaw8rcp3xlkc6aetanwaaf3q4u8a0andm7e9774ch509grdl8qhehdzqgr5hgqqqqqqqqqq00gz24",
+          "certificate1qyqsqqqqqqqqqqzskr0js94wwxksa223ejj2epurpgnu3r73jftwc344mphjnqhzr3jng0zftup5vecwdkge5nwljzqsqamg3nj"
+        ]
+      ],
+      [
+        "access_liquidity",
+        [
+          "verifier1qysqqqqqqqqqqqytkuqqqqqqqqq2edcqqqqqqqqqnw6szqqqqqqqpnlsqyqqqqqqqzypgqgqqqqqqqqvqqqqqqqqqqqpql33kfvg56rjvhd8gf6u8sf88qufpks42e79geja3n8tt7l9tqwplz3fn80u4ere5npxpj4tc6ypwug5v0tkeupea0dxnnhcrt3e4x3x8830pqgktrgjrqrdcvj8lt8h39a5cxl8h9s2vfjwmj80p7xsryjxwmlw5j9qgtslhs7f9vk33t7m938kcenp2gxpgvzxrevu8dce77hl4vqq95a8jh2wz63e95txs8ugdaj39qq64k25nw57rmk7y3x3nhq30jhzme09u3xt62nzu7fsletcq72edz2yw3lddmc444hghqvkm7hfmu7hagd6d3f3328ya96vpkrhpw8x0kztygu7kl42zldnv4v37ae3sja0tgm7cv36jevw0qqkfxj6eeyujka20gmdzgk8rs32lzletp024fq37ztpqer8xkw8mptqvz0s4trq548gc4lp9s7azmcpdgn2m9fnzwrwdhhksghx3c0kcye306snemeayqgm548f0s75cwjjh8q3fdcltdhsv59cz6vm77jspuz2w66m0vkexa6k8da0smfsred3s3u3tyx5a078mcx9r8efwxqu7uhn6hpkq3xtgqu5mphx5t2tq8czf869mf2kejdz7zphk6kanm257tcz6ej3sy79kvv3wt6lwz48568gk44krw5xrpz3e6k9crhxnqw4g4fgmn2r8ktztujupu4k5ngkpc3hhydujnlfym9fhfrqf0g63k0p96sc65yh7veszdn26h374xq9cnsc0zzek0kz5e4vs25mwf08f689hk0n0ta5ecn5y0qt48tsw9ytqeh68m60hp2ag3jdracyz0vp7xsxzmx6lg59hwdnzu05tsxyfc4nlhwsretfjak9sg6sflw7lp26g3t6u2tfzmjkm0f97gtd3kccp5rgj8dd5hj8azxch2f93a4w763aj4k78xm9aaf9zn6r35us442wmnnqqqqqqqqqqtlf9cv",
+          "certificate1qyqsqqqqqqqqqq86rzag8h3hew93skf5zyqctn0fqupqncqdkc3v57wjelczvpp84e0p7kuj4e2pqm8qtw0qdf5qq2qqqm6d5ga"
+        ]
+      ],
+      [
+        "repay_loan",
+        [
+          "verifier1qygqqqqqqqqqqqxy05qqqqqqqqqvclgqqqqqqqqqmm6qqqqqqqqqqggeqyqqqqqqqr5mwqqqqqqqqqqvqqqqqqqqqqqx2wv47kct99uccme7zggksym74gak42aua72yd6kpy4m4vjjv4p0a9ckzfz4vp6gc4ke4flra57vq5tfltvrxnn7qa2f4s7tmzgnxpeqf4h36ce8mcrtxmeang7c5r7s7tcl8wnfcz8v7dugg5qx4c7dqzqvaqyy8jdy75p2t8hspxaku4a3e4kez9rf5j7m2l86g4lhegm04semvkrf6lav5ez9gsv34ley6q9tayavj7wvamlz03rsgd07tp3ta6y6c69yq32ezv87qxukqja7qqq2v3d0fvfjsw9kr5mfm59tggqdre38a886kstgvyh6fcyveuvz53wle0t4reydzsu4y089d54dvgjp6npxeg2ex22j59zck84lkq2qfnlugyudt3fye7gql5j6948dhmmjqn7r8zd894qa88xrldmkqgke33fpeu7g3tas4xn59qh5uceqqqwx8alvxhrxy6nkfrhqq29h5qdxg8m7p6mkddad4cq73tl2d78aqgr7gcx46l8mjua2f39kmu07gpw07n3ng6v8sw0gkdhkm78clwttjf8xu3yu68gfm7qwy3xj7qgkuscu5has4gfmwcx8sdk2gdfemsxk5jw2ldarl3dl9nlh00c0mul7vndppnl79xdl3ta4npdmu2vyuudq9ctgnzw7ez2eclapyz63zhqgzg4slv58r5w2gj058d3cq8qn8dtwme2z096gsc7eh0h8g8hlj0795rqgq0s8aclumhwg6653acyqznusxurde0wlx09zp6j0z8hkvv7d5zmdc05tvvrgq23nvj9lwl7phlher4gdd7ftpsxjtzh8geqgqra6u3mdr24hzhd03nj4twuueshqf7927dmq0yxrmj8deehe559eskhj9jj250y0mcx578h6ke23sqhlrjdm5gvt2mgnl4tpen6slqhn4wak7y4jp9gv7sucwhwzxurk2l74sqqqqqqqqqtp529d",
+          "certificate1qyqsqqqqqqqqqqz6szl4jpyhdakxkfx8g37tfxk2hfuqjrhvjelduh6mhwq7fpgmnwv455hmtqvld6tz0capygf4lzqqq8rm0ce"
+        ]
+      ],
+      [
+        "flag_default",
+        [
+          "verifier1qygqqqqqqqqqqqpm0qqqqqqqqqqyz7qqqqqqqqqqwt0qqqqqqqqqp78nqqqqqqqqqzstyqqqqqqqqqqvqqqqqqqqqqqw70je2q7yhd2v2znfznl3uuumx93kxkl9wpuwz44ympuhfljvv4vwdnka7hww36l8vkfc8l8gvfvqfwqar0r08xcth8hdp86nc82w6q3wjvhesj0d6jp9j98v6n59h9mc9x05e02syj68karmg5ss83tgqvcxjyfsjffjqwux9anm3pwmfx68yxpw3p56slh069ajn360avsl9vgczan5l4yrvqrxhzm09jc9qzhz4xfema9tedlgqfw6uruxjj8cqquxe07dvym4s98gqv7nm6v45hznpjnlcvzllphtktqa966djqpv0hhucfnxagl955c2um3ng63yadyve56mfwr2fdr27sgaq68x0fz2mp5377kz3wkzgr7e50w5f7q84lg0etlvslh79zrre773z2fxkpp0vavae8wmwex2cxjdkclet0n7qpn2c2n69vhzkqm47kp224cqn059fcg3lk7yzxlc2l75a86q7z0mv65ktxut39njnvh6alux8rdhq5y2px3m5afxtg6tqw7lmaxgr39m6kfdtam89nt4v79fvfslctmczn26nvf9cv0vxdlux05yuat3vhgwt2z9g5lyzvvc2k2azfclqretzmujz6e0404um3pzgg09rmcyql447g2z6qs7xlwdvk90pa962fca4tppvee9h4ewhgtj34cjeqg7t2rk5kszjgeyx26l5wpw64hapa6wp6np2ramrrgn69r8ce8tcs8fpeu824guvv5l2fta6wmlrvqw7rgqmltdnkulmkckwvs36w358ku6r2j3hez9s6z8qmthfx5flyl7t4836vdtrxqj2dm6ar7fk2vpeh2lumu0wfrxvpvdlzt6dv7tz3k7skyg74nllkmenxrnjt2qxnlhm0uyeyf70squ02fld6kw2j6gqzrw0ydu36h0qlr5qumzhkymt47z2efe8dp73fe6us74xfxrjyr3qjnqqqqqqqqqql425sz",
+          "certificate1qyqsqqqqqqqqqqp44k38qlvvuvtthr6aa5hcucyqqnpw2gut5hh4j84vxdgh3zaelzyser3yv0pk2mulcgvhxyhs5zqsqra3z3a"
+        ]
+      ],
+      [
+        "withdraw_liquidity",
+        [
+          "verifier1qygqqqqqqqqqqqz70sqqqqqqqqqxvlqqqqqqqqqqc8cqqqqqqqqqp6c5qyqqqqqqqpnm2qqqqqqqqqqvqqqqqqqqqqq9gn0v688tg4caz4t7xydrl43lrwftrsrc2w0p0s5wv67t7td0kzddhmyllzgn6ewgct2vu9e85ngprlre9ytkshkr5c2g9msjdv9l9vqhq8k9khtjp6yqh0zjgm2aevvdlxaa9zxvza50vg02ff24eslsq6ftjxyyzxfawvsse842g4dcxc5p0vd5m0u689ppzjncwk5qxnm0gafhuwuy7sjcdugp9tyehkn8qxfpxhsal28etucxc4yh48paj4uy2mknued3fk7uhleplkj3nqwv59ukzsjea5swej0txzns2wdscqwc2n90qvv8fx5l4cyns8fq6tk0lt4zvp64n9r5j5hz82nwl0eaqf53dq63hqelr7lvw5c436mh3kq9y6mjpxfvy2k9q42yfc2h9na4ve0rfh2qzk7msm74zxeca5mjvfugtg2de93plp7hesm0cljlevcqsh2q9vm00hssuwa8yhq6t60j2wqhlghrrnrrxltzlejwq9c8fzxt90hd3u0n9wy64gw6kseaf2dsqels5ae92jpztxak5w5at7sdnwnttvee3qz2wezz42zsrhyrjnugkqgs3tnyjsknajhqlm98ryncsrnazk5d7de2uy8pethd66yplmg3t0nj0nh4dj4enn0aqwgwgdl6d839q4wvc68scq3nn80796kz2qyh4lk245uh9205k937367tqjhhhc5qlq4zdeuxenmshm2pfxcvl3kwyp29xdd6ns8jcevz3x0t9jql69ulha0pfayyq24gdshump28qgrr8xysl59p9w3w7rmm66yavpjgf7cy3mlemha9teyxmpt3j2vqww6hf46uxn2gxjjqpkelr4h05s5z35acl85h0uwjhpmad6axd8y8fylq32vaqnsx2xzjvpsvfspqr4lavjlg8qwap94ts80apcyxqw2nnjvh4kzysevxclscm02nmsqjg64qqqqqqqqqqy7hd8r",
+          "certificate1qyqsqqqqqqqqqqq7pdgslzmgfn5d9rqtnnqxl5g06ssf8uhlpdg78uf2kujp7ph5qg6f6rgkn7u78zpwatdkj2438uqsq3peslx"
+        ]
+      ]
+    ],
+    "program_checksum": [
+      "54u8",
+      "95u8",
+      "53u8",
+      "149u8",
+      "184u8",
+      "54u8",
+      "21u8",
+      "123u8",
+      "246u8",
+      "140u8",
+      "1u8",
+      "2u8",
+      "62u8",
+      "105u8",
+      "24u8",
+      "36u8",
+      "53u8",
+      "99u8",
+      "49u8",
+      "120u8",
+      "70u8",
+      "241u8",
+      "132u8",
+      "249u8",
+      "171u8",
+      "196u8",
+      "45u8",
+      "89u8",
+      "45u8",
+      "212u8",
+      "28u8",
+      "187u8"
+    ],
+    "program_owner": "aleo1fzpxupyv6cmnkacw85f533wtv33lazvy386vzjsatkjgm4gfqg9sk6a375"
+  },
+  "fee": {
+    "transition": {
+      "id": "au1fvtn776pwvzhcrjwgra6uthfqq8xgcvz0u89fn72z2q8dgkeggxqkvvt0f",
+      "program": "credits.aleo",
+      "function": "fee_public",
+      "inputs": [
+        {
+          "type": "public",
+          "id": "5776514145206271215437169046320885988983271295150130506956371253764670872617field",
+          "value": "8421588u64"
+        },
+        {
+          "type": "public",
+          "id": "3102300813256183498099950446068454096682406547463213561695872053950318528155field",
+          "value": "0u64"
+        },
+        {
+          "type": "public",
+          "id": "3754192374181646440085903285146174562837114397491295781644356461973091209562field",
+          "value": "4111563022526687000792938410053573749732562795035473226052222013011019084222field"
+        }
+      ],
+      "outputs": [
+        {
+          "type": "future",
+          "id": "858734799425571561814586040432790538058619385819884272352900513385810344864field",
+          "value": "{\n  program_id: credits.aleo,\n  function_name: fee_public,\n  arguments: [\n    aleo1fzpxupyv6cmnkacw85f533wtv33lazvy386vzjsatkjgm4gfqg9sk6a375,\n    8421588u64\n  ]\n}"
+        }
+      ],
+      "tpk": "3411287461051693166635140168098949994441848476404780107225732672844780883209group",
+      "tcm": "2247553589807866995715766014891130982144691394800210417476653290709364623941field",
+      "scm": "3838360300144519637464787997684765926187369699104286770387801064409928632408field"
+    },
+    "global_state_root": "sr1l2ufzwx5cm24v6h0s93twh7ded55rtpc5gdnt4axx9qhkd4xnu9stxflq8",
+    "proof": "proof1qyqsqqqqqqqqqqqpqqqqqqqqqqqykaa89rptstm7v45d79j64skfwnmad9e3ehey27x9glcfkyxwl2e5f5w867nc4dg00urys5gycvupq8jhled9cqgdruq4q07zj0y8d7h8z47jc52e5kdshzrpnp4mt84qpcujmf5wvd7ja7kedvdtz3hfvq26rrnajxtyk8u3mpvunzea7x9eyhzwr0rhj5ml4fzhj0arpe9xxtu3c6ch3gv9t7vl8mpw7pzgwcqjh3ze3swmr4y75vq08tzln0cxvgnt68pnfshhr22aa9tqtj7dkp6f28aj4yffas0v2zerzluactuqmphhxpj28uf56svt3j5792es26fxepadtcn6fp0mdgtk82kf30ppcqvjm9hpnl4tt5t0y3m4aslsrs9zk24q58xfakdj8lwcrkpmhe6t0gs9htemf94088rprfhwzeuux3pr9eyezqd8h2zedhfp9wshqp0c6f0x5tk6sya88vlt7yvz9a53v7m34ntu064rkknu94fw6gq5r6w6q78gzmukmp50fjuq4st67q9yvqtsqywh7fdfk7c0cnsns3268xgn6yhwsj4pvn4cthz75a50h6k9t4wyl2rtvqf4mx3cefjymjqq3udj3lzs4nycq9je33ly6alm8lp509lhvuweupkmjxkdu477snwxuj08q8z36djeck8k0enkkwupmhrpdne9zalcd2rhp6tc9ja5aj9rpe0jmhceeq8qpfxtta63vv9zt8hkhlx59f068rstquv48vhrl2426wq5myp9lc6lngpxzkfsjp6fphtvauesdvzmvey8sx3l0m5mc82yppwch64jhf3xhf2yawpuqqvhzct0ay7mcuw7kl38jdw5kh8cdc8xsrxt0tcagstl83xq7svqq96jks70qt6j5k7lesc26gqnu94clrpa7399xgf8prcxac57g3gt8r2nq50qaahvddu9tmnyaf7mmwjqn7qm8xwg8hzq9pqhdzfzysrc7kd9r0rzfcs7da67gxldnt4zh4gqnlkgws827p9rjr3js2rrxyp4u63agmnr24m7h2tpw7jshggkn2k2v0z0zaecpv3fzucdzgcvp4xcfvf3l8dkcfawtv4ue7qd4uk7p8lk9g6yect80jvhxxas6qf3qqunvw6gqqdeymj4r82alr98vf00wjrstay3x30fcfuayjkzw0cfqvqqqqqqqqqqpk6e9997h055tthqmqdwn2e0y0h76n5zvdh3zjj0k76a5fp7pgtegd6489fskcap22ee6t4ul9qvsyqw9alxs35wy2fllz50cqkgzcwnfyry4y9snfk00ph207r5p0x3q7xqmluvun76n8dgj8jsagte3gqpq87smh20tktfu5553dan3nd4s0twdlhkxwhceq5attawzdt6c7pqepn42x7683de3m5zpnkt2k9plvwv793543z963er8cucn80w36nmyhzfguc0x46w0d5nfqtgys6ksqqqez8ynv"
+  }
+}

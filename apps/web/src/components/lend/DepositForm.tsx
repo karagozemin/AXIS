@@ -66,8 +66,8 @@ export function DepositForm() {
     setIsDepositing(true);
     setShowTxModal(true);
 
-    // Execute the deposit transaction
-    const result = await deposit(String(numericAmount * 1_000_000)); // Convert to microcredits
+    // Execute the deposit transaction (v2: includes lockDays for lock period)
+    const result = await deposit(String(numericAmount * 1_000_000), lockPeriod); // Convert to microcredits
 
     if (result) {
       setStep('success');

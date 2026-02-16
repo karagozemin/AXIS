@@ -1,0 +1,6 @@
+{
+  "program": "axis_score_v2.aleo",
+  "version": "0.2.0",
+  "description": "AXIS Protocol v2 — Privacy-preserving credit scoring with 5-factor weighted model, on-chain commitments, audit tokens, and trust derivation for under-collateralized lending.",
+  "license": "MIT"
+}
