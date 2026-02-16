@@ -26,7 +26,19 @@
   <img src="https://img.shields.io/badge/Leo-3.4.0-FFD700?style=for-the-badge" alt="Leo 3.4.0" />
   <img src="https://img.shields.io/badge/Next.js-14-000000?style=for-the-badge" alt="Next.js 14" />
   <img src="https://img.shields.io/badge/WaveHack-2026-8B5CF6?style=for-the-badge" alt="WaveHack 2026" />
+  <img src="https://img.shields.io/badge/Deployed-Testnet%20Live-00FF88?style=for-the-badge" alt="Deployed" />
 </p>
+
+---
+
+## 🚀 Testnet Deployment (Live)
+
+| Program | Status | Explorer |
+|---------|--------|----------|
+| `axis_score_v2.aleo` | ✅ **DEPLOYED** | [View on Explorer](https://explorer.aleo.org/program/axis_score_v2.aleo) |
+| `axis_lending_v2.aleo` | ✅ **DEPLOYED** | [View on Explorer](https://explorer.aleo.org/program/axis_lending_v2.aleo) |
+
+**Deployer**: `aleo1fzpxupyv6cmnkacw85f533wtv33lazvy386vzjsatkjgm4gfqg9sk6a375`
 
 ---
 
@@ -69,15 +81,25 @@ Traditional DeFi requires 150%+ collateralization, locking billions in capital. 
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Credit Tiers & Benefits:**
+**v2 5-Factor Weighted Scoring Model:**
 
-| Tier | Score Range | Collateral Ratio | Interest Rate |
-|------|-------------|------------------|---------------|
-| Tier 5 | 800+ | 40% | 2.00% APR |
-| Tier 4 | 700-799 | 50% | 2.75% APR |
-| Tier 3 | 600-699 | 60% | 3.50% APR |
-| Tier 2 | 500-599 | 70% | 4.25% APR |
-| Tier 1 | 300-499 | 80% | 5.00% APR |
+| Factor | Weight | Description |
+|--------|--------|-------------|
+| Repayment History | 35% | On-time loan repayments |
+| Position Duration | 25% | Long-term protocol engagement |
+| Utilization Rate | 20% | Responsible credit usage |
+| Protocol Loyalty | 10% | Interaction frequency |
+| Collateral Diversity | 10% | Risk diversification |
+
+**Credit Tiers & Benefits (v2):**
+
+| Tier | Name | Score Range | Collateral | LTV | Interest Rate |
+|------|------|-------------|------------|-----|---------------|
+| 1 | Axis Elite | ≥ 720 | 50% | 200% | 3.5% APR |
+| 2 | Core | 620-719 | 75% | 133% | 5.0% APR |
+| 3 | Entry | < 620 | 90% | 110% | 8.0% APR |
+
+> 📄 See [docs/CREDIT_SCORING.md](docs/CREDIT_SCORING.md) for the full credit scoring whitepaper.
 
 ### 🏊 Dark Pool Liquidity ("Seed the Axis")
 
@@ -126,13 +148,16 @@ AXIS/
 │       └── public/             # Static assets
 │
 ├── programs/
-│   ├── axis_score/             # Credit Score Leo Program
-│   │   └── src/main.leo        # ZK credit scoring logic
-│   └── axis_lending/           # Lending Leo Program
-│       └── src/main.leo        # Loan & deposit logic
+│   ├── axis_score_v2/          # Credit Score v2 (DEPLOYED)
+│   │   └── src/main.leo        # 5-factor ZK credit scoring
+│   ├── axis_lending_v2/        # Lending v2 (DEPLOYED)
+│   │   └── src/main.leo        # Tier-based lending + insurance
+│   ├── axis_score/             # v1 (deprecated)
+│   └── axis_lending/           # v1 (deprecated)
 │
 ├── docs/
-│   └── ARCHITECTURE.md         # Detailed technical docs
+│   ├── ARCHITECTURE.md         # Technical architecture
+│   └── CREDIT_SCORING.md       # Credit scoring whitepaper
 │
 └── packages/                   # Shared packages (future)
 ```
@@ -280,47 +305,69 @@ AXIS is being developed through the **Aleo WaveHack** program, a 10-wave hackath
 
 ---
 
-### 🌊 Wave 2: Smart Contract Deployment
+### 🌊 Wave 2: Smart Contract Deployment ✅
 **February 3 - February 17, 2026** 
 
-**Status: PLANNED** 🔄
+**Status: COMPLETE** ✅
 
-**Goals:**
-- [ ] Deploy `axis_score_v1` to Aleo testnet
-- [ ] Deploy `axis_lending_v1` to Aleo testnet
-- [ ] Real wallet transaction signing
-- [ ] On-chain record management
-- [ ] Transaction history from chain
-- [ ] Testnet faucet integration
-- [ ] Error handling improvements
-- [ ] Program fee optimization
+#### Deliverables Completed:
+
+**Smart Contracts Redesigned & Deployed**
+- [x] `axis_score_v2.aleo` — 5-factor weighted credit scoring engine (deployed to testnet)
+- [x] `axis_lending_v2.aleo` — Tier-based under-collateralized lending (deployed to testnet)
+- [x] Constructor support for consensus version 12
+- [x] CreditBond & AuditToken private records
+- [x] LoanTicket & LiquidityReceipt private records
+- [x] On-chain mappings for protocol stats (TVL, insurance fund, tier distribution)
+- [x] Insurance fund mechanism (5% of deposits)
+- [x] Default penalty & collateral seizure logic
+
+**Credit Scoring Whitepaper**
+- [x] [CREDIT_SCORING.md](docs/CREDIT_SCORING.md) — Full whitepaper addressing reviewer feedback
+- [x] 5-factor model: Repayment (35%), Duration (25%), Utilization (20%), Loyalty (10%), Diversity (10%)
+- [x] Trust derivation via AuditToken (3-step ZK handshake)
+- [x] Risk management framework (insurance fund, tiered collateral, default loop)
+- [x] Mathematical specification with formal formulas
+- [x] Security analysis (attack vectors, trust assumptions)
+
+**Privacy UX Overhaul**
+- [x] PrivacyShield components (Borrow, Deposit, Score variants)
+- [x] ZK-HIDDEN / PUBLIC badges showing what data stays private vs on-chain
+- [x] CreditScoreCard with 5-factor breakdown + ZK proof visualization
+- [x] Tier-based BorrowForm (Elite/Core/Entry with collateral/LTV/APR)
+- [x] Privacy shields integrated on borrow, lend, and vault pages
+
+**Frontend v2 Hooks**
+- [x] `useCreditScore()` — computeCredibility, verifyThreshold, createAuditToken, commitScore
+- [x] `useLending()` — deposit with lockDays, borrow with tier, repay, withdraw
+- [x] Updated to reference `axis_score_v2.aleo` and `axis_lending_v2.aleo`
 
 **Technical Focus:**
-- Leo program deployment pipeline
-- Real ZK proof generation in browser
-- Aleo SDK integration refinement
+- Leo program deployment with constructor (consensus v12)
+- 5-factor ZK credit scoring circuit
+- Tier-based collateral/LTV risk management
 
 ---
 
-### 🌊 Wave 3: Credit Scoring Engine
+### 🌊 Wave 3: Score Integration & Real Transactions
 **February 17 - March 3, 2026** 
 
-**Status: PLANNED** ⏳
+**Status: IN PROGRESS** 🔄
 
 **Goals:**
-- [ ] Multi-factor credit score algorithm
-- [ ] On-chain activity analyzer
-- [ ] Repayment history weighting
-- [ ] Score decay mechanism
+- [ ] Connect frontend to live testnet contracts (disable demo mode)
+- [ ] Real ZK proof generation in browser via Aleo SDK
+- [ ] Score decay mechanism (time-based bond expiry)
 - [ ] Score improvement suggestions UI
-- [ ] Historical score tracking
-- [ ] Score verification proofs
+- [ ] Historical score tracking from on-chain mappings
 - [ ] Tier upgrade notifications
+- [ ] On-chain activity analyzer for repayment_count / default_count
+- [ ] Transaction history from chain explorer
 
 **Technical Focus:**
-- Complex ZK circuits for scoring
-- Efficient on-chain data aggregation
-- Privacy-preserving analytics
+- Aleo SDK wallet integration for real transactions
+- Reading on-chain mapping state
+- Browser-side ZK proof generation performance
 
 ---
 

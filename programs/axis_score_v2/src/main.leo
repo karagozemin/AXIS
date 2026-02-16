@@ -63,7 +63,12 @@ program axis_score_v2.aleo {
     /// Repayment history — number of successful repayments.
     mapping repayment_count: address => u64;
 
+    // ─────────────────── Constructor ───────────────────
+    // Required for deployment on consensus version >= 12.
+    // Initializes global protocol stats to zero.
 
+    @noupgrade
+    async constructor() {}
 
     // ─────────────────── Transitions ───────────────────
 

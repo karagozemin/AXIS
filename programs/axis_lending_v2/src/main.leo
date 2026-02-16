@@ -75,7 +75,12 @@ program axis_lending_v2.aleo {
     /// Protocol utilization stats — total loans repaid (key 0u8).
     mapping loans_repaid: u8 => u64;
 
+    // ─────────────────── Constructor ───────────────────
+    // Required for deployment on consensus version >= 12.
+    // Initializes all global counters to zero.
 
+    @noupgrade
+    async constructor() {}
 
     // ─────────────────── Transitions ───────────────────
 
