@@ -34,7 +34,13 @@ const POLL_INTERVAL = 3000;   // 3 seconds between polls
 const MAX_POLL_TIME = 180000; // 3 minutes max wait
 
 export function useAleoTransaction(): UseAleoTransactionReturn {
-  const { connected, publicKey, requestTransaction, transactionStatus: walletTxStatus } = useWallet();
+  const { 
+    connected, 
+    publicKey, 
+    requestTransaction, 
+    transactionStatus: walletTxStatus,
+    getExecution,
+  } = useWallet();
   const [state, setState] = useState<TransactionState>(initialState);
 
   const execute = useCallback(async (
@@ -82,17 +88,17 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
       // Step 3: Broadcasting
       setState(prev => ({ ...prev, status: 'broadcasting', proofTime }));
 
-      // Step 4: Confirming — poll wallet for actual on-chain confirmation
+      // Step 4: Confirming — poll for real on-chain TX ID (at1...)
       setState(prev => ({ ...prev, status: 'confirming' }));
 
-      // Poll transactionStatus until confirmed or timeout
-      const confirmedTxId = await pollForConfirmation(walletTrackingId, walletTxStatus);
-
-      // Use the real at1... TX ID if we got one, otherwise use tracking ID
-      const finalTxId = confirmedTxId || walletTrackingId;
+      const realTxId = await resolveRealTransactionId(
+        walletTrackingId, 
+        walletTxStatus, 
+        getExecution
+      );
       
-      setState(prev => ({ ...prev, status: 'success', txId: finalTxId }));
-      return finalTxId;
+      setState(prev => ({ ...prev, status: 'success', txId: realTxId }));
+      return realTxId;
 
     } catch (error: any) {
       const msg = error.message || 'Transaction failed';
@@ -103,7 +109,7 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
       }));
       return null;
     }
-  }, [connected, publicKey, requestTransaction, walletTxStatus]);
+  }, [connected, publicKey, requestTransaction, walletTxStatus, getExecution]);
 
   const reset = useCallback(() => {
     setState(initialState);
@@ -117,87 +123,116 @@ export function useAleoTransaction(): UseAleoTransactionReturn {
 }
 
 /**
- * Poll Leo Wallet's transactionStatus until confirmed or timeout.
+ * Resolve the real on-chain at1... transaction ID from the wallet's tracking UUID.
  * 
- * Known Leo Wallet status values:
- *   "Pending"   — proof generated, not yet broadcast / not yet confirmed
- *   "Completed" — confirmed on-chain
- *   "Finalized" — finalized on-chain  
- *   "Failed"    — rejected by network
- *   "Rejected"  — user cancelled
- * 
- * If the status response itself contains an at1... TX ID we extract it.
+ * Strategy:
+ * 1. If the ID already starts with "at1", it's real — return immediately
+ * 2. Poll walletTxStatus until "Completed" / "Finalized"
+ * 3. Once confirmed, call getExecution to extract the real at1... TX ID
+ * 4. If getExecution fails, search recent transactions via node API
+ * 5. Timeout after 3 minutes
  */
-async function pollForConfirmation(
+async function resolveRealTransactionId(
   trackingId: string,
   walletTxStatus: ((txId: string) => Promise<string>) | undefined,
-): Promise<string | null> {
-  if (!walletTxStatus) {
-    // Wallet doesn't support status polling — fallback to API polling
-    return await pollNodeForTransaction(trackingId);
+  getExecution: ((txId: string) => Promise<string>) | undefined,
+): Promise<string> {
+  // If already a real Aleo TX ID, return it
+  if (trackingId.startsWith('at1')) {
+    return trackingId;
   }
 
   const start = Date.now();
 
+  // Phase 1: Wait for wallet to confirm the transaction
   while (Date.now() - start < MAX_POLL_TIME) {
-    try {
-      const statusStr = await walletTxStatus(trackingId);
-      const status = statusStr.toLowerCase();
+    // Try to get execution data (contains real TX ID)
+    if (getExecution) {
+      try {
+        const executionData = await getExecution(trackingId);
+        // executionData may be a JSON string or contain the at1... ID
+        const realId = extractAleoTxId(executionData);
+        if (realId) return realId;
+      } catch {
+        // Not ready yet — keep polling
+      }
+    }
 
-      // Check for completion
-      if (status === 'completed' || status === 'finalized' || status === 'accepted') {
-        // The trackingId might already be the real at1... id after completion
-        if (trackingId.startsWith('at1')) {
+    // Check transaction status via wallet
+    if (walletTxStatus) {
+      try {
+        const statusStr = await walletTxStatus(trackingId);
+        const status = statusStr.toLowerCase();
+
+        // Extract at1... from status string if embedded
+        const embeddedId = extractAleoTxId(statusStr);
+        if (embeddedId) return embeddedId;
+
+        if (status === 'failed' || status === 'rejected') {
+          throw new Error(`Transaction ${status} on-chain`);
+        }
+
+        // If completed but no at1... found yet, try getExecution one more time
+        if (status === 'completed' || status === 'finalized' || status === 'accepted') {
+          if (getExecution) {
+            try {
+              const executionData = await getExecution(trackingId);
+              const realId = extractAleoTxId(executionData);
+              if (realId) return realId;
+            } catch {
+              // Fall through to node API search
+            }
+          }
+          // Confirmed but can't get real ID — try node API
+          const nodeId = await searchNodeForRecentTx(trackingId);
+          if (nodeId) return nodeId;
+          
+          // Last resort: return tracking ID (user can still check wallet)
           return trackingId;
         }
-        // Otherwise try to fetch real TX ID from the node
-        return trackingId;
-      }
-
-      // Check for failure
-      if (status === 'failed' || status === 'rejected') {
-        throw new Error(`Transaction ${status} on-chain`);
-      }
-
-      // Still pending — wait and retry
-      await sleep(POLL_INTERVAL);
-    } catch (error: any) {
-      // If polling itself fails (e.g. wallet disconnected), throw
-      if (error.message?.includes('failed') || error.message?.includes('rejected')) {
-        throw error;
-      }
-      // For other errors (network issues), keep polling
-      await sleep(POLL_INTERVAL);
-    }
-  }
-
-  throw new Error('Transaction confirmation timed out (3 min). Check explorer for status.');
-}
-
-/**
- * Fallback: poll the Aleo node API directly for a transaction.
- */
-async function pollNodeForTransaction(txId: string): Promise<string | null> {
-  const apiBase = process.env.NEXT_PUBLIC_ALEO_RPC_URL || 'https://api.explorer.provable.com/v1';
-  const start = Date.now();
-
-  while (Date.now() - start < MAX_POLL_TIME) {
-    try {
-      const res = await fetch(`${apiBase}/testnet/transaction/${txId}`);
-      if (res.ok) {
-        const data = await res.json();
-        // If confirmed, return the TX ID
-        if (data && (data.id || data.transaction_id)) {
-          return data.id || data.transaction_id || txId;
+      } catch (error: any) {
+        if (error.message?.includes('failed') || error.message?.includes('rejected')) {
+          throw error;
         }
       }
-    } catch {
-      // Network error — keep polling
     }
+
     await sleep(POLL_INTERVAL);
   }
 
-  throw new Error('Transaction confirmation timed out (3 min). Check explorer for status.');
+  throw new Error('Transaction confirmation timed out (3 min). Check your wallet for status.');
+}
+
+/**
+ * Extract an at1... transaction ID from any string (status response, execution data, etc.)
+ */
+function extractAleoTxId(data: string): string | null {
+  if (!data) return null;
+  // Aleo TX IDs are "at1" followed by 58 alphanumeric chars
+  const match = data.match(/at1[a-z0-9]{58,62}/i);
+  return match ? match[0] : null;
+}
+
+/**
+ * Search Aleo node API for a recent transaction (fallback when wallet doesn't provide real TX ID)
+ */
+async function searchNodeForRecentTx(trackingId: string): Promise<string | null> {
+  const apiBase = process.env.NEXT_PUBLIC_ALEO_RPC_URL || 'https://api.explorer.provable.com/v1';
+  
+  try {
+    // Try direct lookup with the tracking ID
+    const res = await fetch(`${apiBase}/testnet/transaction/${trackingId}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.id) return data.id;
+      const textId = extractAleoTxId(JSON.stringify(data));
+      if (textId) return textId;
+    }
+  } catch {
+    // Not found — expected for UUID tracking IDs
+  }
+
+  return null;
 }
 
 function sleep(ms: number) {
